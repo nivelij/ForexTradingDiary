@@ -63,7 +63,7 @@ export default function NewAccountPage() {
       const newAccount = await createAccount({
         name: formData.name,
         currency: formData.currency,
-        balance: initialBalance,
+        initial_balance: initialBalance,
       });
 
       // Auto-select the new account
@@ -74,7 +74,7 @@ export default function NewAccountPage() {
         description: `${formData.name} has been created successfully.`,
       });
 
-      router.push("/");
+      router.push(`/?accountId=${newAccount.id}`);
     } catch (error) {
       console.error(error);
       toast({

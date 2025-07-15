@@ -2,6 +2,22 @@ import os
 import json
 import psycopg2
 from psycopg2 import extras
+from datetime import datetime
+
+# Define the CORS headers that will be added to every response
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+    "Access-Control-Allow-Credentials": "true"
+}
+
+def build_response(status_code, payload):
+    return {
+        'statusCode': status_code,
+        'headers': CORS_HEADERS,
+        'body': json.dumps(payload, default=str)
+    }
 
 def get_db_connection():
     """Establishes a connection to the CockroachDB database."""
@@ -13,78 +29,92 @@ def get_db_connection():
         raise
 
 def lambda_handler(event, context):
-    """
-    Main Lambda function handler.
-    Routes requests to the appropriate function based on the HTTP method and path.
-    """
-    print(f"Received event: {json.dumps(event)}")
+    # Extract the path and HTTP method using keys for REST API proxy integration
+    path = event.get("path")
+    method = event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod")
+    query_params = event.get("queryStringParameters") or {}
+    path_parameters = event.get("pathParameters") or {}
+    body = event.get("body")
 
-    # Handle pre-flight CORS requests
-    if event.get('httpMethod') == 'OPTIONS':
+    print(f"Received event: {event}")
+
+    if body:
+        try:
+            body = json.loads(body)
+        except Exception:
+            body = None
+
+    # Handle OPTIONS (preflight) request
+    if method == "OPTIONS":
+        print("Handling OPTIONS pre-flight request")
         return {
-            'statusCode': 200,
+            'statusCode': 204,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+                "Access-Control-Allow-Credentials": "true"
             },
             'body': ''
         }
 
     try:
-        resource = event.get('resource')
-        http_method = event.get('httpMethod')
-        path_parameters = event.get('pathParameters', {})
-        body = event.get('body')
-
-        # Route the request to the appropriate handler
-        if resource == '/account' and http_method == 'POST':
-            response = create_account(json.loads(body))
-        elif resource == '/account' and http_method == 'GET':
-            response = get_all_accounts()
-        elif resource == '/account/{id}' and http_method == 'GET':
-            response = get_account_by_id(path_parameters.get('id'))
-        elif resource == '/trade' and http_method == 'POST':
-            response = create_trade(json.loads(body))
-        elif resource == '/trade' and http_method == 'GET':
-            response = get_all_trades()
-        elif resource == '/trade/{id}' and http_method == 'GET':
-            response = get_trade_by_id(path_parameters.get('id'))
-        elif resource == '/analytics/{account_id}' and http_method == 'GET':
-            response = get_analytics(path_parameters.get('account_id'))
-        else:
-            return {
-                'statusCode': 404,
-                'headers': {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
-                },
-                'body': json.dumps({'message': 'Not Found'})
-            }
+        # /account endpoints
+        if path == "/account" and method == "POST":
+            if not body:
+                return build_response(400, {"error": "Missing request body"})
+            response = create_account(body)
+            return build_response(200, response)
         
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
-            },
-            'body': json.dumps(response, default=str) # Use default=str to handle UUIDs, decimals, etc.
-        }
-
+        elif path == "/account" and method == "GET":
+            response = get_all_accounts()
+            return build_response(200, response)
+        
+        elif path and path.startswith("/account/") and method == "GET":
+            account_id = path_parameters.get('id') or path.split('/')[-1]
+            response = get_account_by_id(account_id)
+            return build_response(200, response)
+        
+        # /trade endpoints
+        elif path == "/trade" and method == "POST":
+            if not body:
+                return build_response(400, {"error": "Missing request body"})
+            response = create_trade(body)
+            return build_response(200, response)
+        
+        elif path == "/trade" and method == "GET":
+            response = get_all_trades()
+            return build_response(200, response)
+        
+        elif path and path.startswith("/trade/") and method == "GET":
+            trade_id = path_parameters.get('id') or path.split('/')[-1]
+            response = get_trade_by_id(trade_id)
+            return build_response(200, response)
+        
+        # /analytics endpoints
+        elif path and path.startswith("/analytics/") and method == "GET":
+            account_id = path_parameters.get('account_id') or path.split('/')[-1]
+            response = get_analytics(account_id)
+            return build_response(200, response)
+        
+        # /health endpoint
+        elif path == "/health" and method == "GET":
+            try:
+                # Simple health check - test database connection
+                with get_db_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1")
+                return build_response(200, {"status": {"server": "OK", "database": "OK"}})
+            except Exception as e:
+                return build_response(503, {"status": "NOTOK", "message": str(e)})
+        
+        # Fallback: endpoint not found
+        else:
+            return build_response(404, {"error": "Endpoint not found"})
+    
     except Exception as e:
         print(f"Error processing request: {e}")
-        return {
-            'statusCode': 500,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'OPTIONS,POST,GET'
-            },
-            'body': json.dumps({'message': 'Internal Server Error'})
-        }
+        return build_response(500, {"error": "Internal Server Error", "message": str(e)})
 
 # --- Handler Functions ---
 
