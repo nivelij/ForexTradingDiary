@@ -5,7 +5,8 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Navigation } from "./Navigation"
-import { storage } from "@/lib/storage"
+import { getAccounts } from "@/services/api"
+import type { TradingAccount } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Plus } from "lucide-react"
@@ -17,38 +18,42 @@ interface AppWrapperProps {
 
 export function AppWrapper({ children }: AppWrapperProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("")
-  const [accounts, setAccounts] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<TradingAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
-    const loadedAccounts = storage.getAccounts()
-    setAccounts(loadedAccounts)
-
-    // Get selected account from storage
-    const savedAccountId = storage.getSelectedAccountId()
-
-    if (loadedAccounts.length === 0) {
-      // No accounts exist, redirect to create account unless already there
-      if (pathname !== "/accounts/new") {
-        router.push("/accounts/new")
+    const initializeAccounts = async () => {
+      try {
+        const apiAccounts = await getAccounts()
+        
+        if (apiAccounts && apiAccounts.length > 0) {
+          setAccounts(apiAccounts)
+          // Auto-select first account
+          setSelectedAccountId(apiAccounts[0].id)
+        } else {
+          // No accounts from API, redirect to create account unless already there
+          if (pathname !== "/accounts/new") {
+            router.push("/accounts/new")
+          }
+        }
+      } catch (error) {
+        console.error('AppWrapper: Error fetching accounts:', error)
+        // If API fails, redirect to create account
+        if (pathname !== "/accounts/new") {
+          router.push("/accounts/new")
+        }
+      } finally {
+        setIsLoading(false)
       }
-    } else if (savedAccountId && loadedAccounts.find((acc) => acc.id === savedAccountId)) {
-      // Valid saved account exists
-      setSelectedAccountId(savedAccountId)
-    } else {
-      // Auto-select first account if no valid saved account
-      setSelectedAccountId(loadedAccounts[0].id)
-      storage.setSelectedAccountId(loadedAccounts[0].id)
     }
 
-    setIsLoading(false)
+    initializeAccounts()
   }, [pathname, router])
 
   const handleAccountChange = (accountId: string) => {
     setSelectedAccountId(accountId)
-    storage.setSelectedAccountId(accountId)
   }
 
   if (isLoading) {

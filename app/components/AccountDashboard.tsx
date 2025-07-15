@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import type { TradingAccount, Trade } from "@/lib/types"
-import { storage } from "@/lib/storage"
+import { getAccount, getTradesByAccount } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -83,14 +83,15 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   })
 
   useEffect(() => {
-    const allAccounts = storage.getAccounts()
-    const selectedAccount = allAccounts.find((acc) => acc.id === accountId)
-    setAccount(selectedAccount || null)
+    const fetchData = async () => {
+      try {
+        const selectedAccount = await getAccount(accountId)
+        setAccount(selectedAccount || null)
 
-    const accountTrades = storage.getTradesByAccount(accountId)
-    setTrades(accountTrades)
+        const accountTrades = await getTradesByAccount(accountId)
+        setTrades(accountTrades)
 
-    // Calculate comprehensive analytics
+        // Calculate comprehensive analytics
     const closedTrades = accountTrades.filter((t) => t.outcome !== "OPEN")
     const winningTrades = closedTrades.filter((t) => t.outcome === "WIN")
     const losingTrades = closedTrades.filter((t) => t.outcome === "LOSS")
@@ -236,6 +237,14 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         monthly: monthlyTrades,
       },
     })
+      } catch (error) {
+        console.error('Error fetching account data:', error)
+        setAccount(null)
+        setTrades([])
+      }
+    }
+    
+    fetchData()
   }, [accountId])
 
   const recentTrades = trades

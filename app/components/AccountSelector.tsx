@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import type { TradingAccount } from "@/lib/types"
-import { storage } from "@/lib/storage"
+import { getAccounts } from "@/services/api"
 
 interface AccountSelectorProps {
   selectedAccountId: string
@@ -17,11 +17,20 @@ export function AccountSelector({ selectedAccountId, onAccountChange }: AccountS
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
 
   useEffect(() => {
-    setAccounts(storage.getAccounts())
+    const fetchAccounts = async () => {
+      try {
+        const apiAccounts = await getAccounts()
+        setAccounts(apiAccounts || [])
+      } catch (error) {
+        console.error('Failed to fetch accounts:', error)
+        setAccounts([])
+      }
+    }
+    
+    fetchAccounts()
   }, [])
 
   const handleAccountChange = (accountId: string) => {
-    storage.setSelectedAccountId(accountId)
     onAccountChange(accountId)
   }
 

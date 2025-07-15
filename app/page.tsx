@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { AccountDashboard } from './components/AccountDashboard';
 import { AccountSelector } from './components/AccountSelector';
@@ -9,7 +9,7 @@ import type { TradingAccount } from '@/lib/types';
 
 import { useSearchParams } from 'next/navigation';
 
-export default function HomePage() {
+function HomePageContent() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,15 +30,12 @@ export default function HomePage() {
           const fetchedAccounts = await getAccounts();
           setAccounts(fetchedAccounts);
 
-          if (fetchedAccounts.length === 0) {
-            router.push('/accounts/new');
-          } else {
+          if (fetchedAccounts && fetchedAccounts.length > 0) {
             setSelectedAccountId(fetchedAccounts[0].id);
           }
         }
       } catch (error) {
         console.error('Failed to initialize page:', error);
-        // Optionally, redirect to an error page or show a message
       } finally {
         setLoading(false);
       }
@@ -52,7 +49,7 @@ export default function HomePage() {
   }
 
   if (accounts.length > 1 && !selectedAccountId) {
-    return <AccountSelector accounts={accounts} onAccountSelected={setSelectedAccountId} />;
+    return <AccountSelector selectedAccountId={selectedAccountId || ""} onAccountChange={setSelectedAccountId} />;
   }
 
   if (selectedAccountId) {
@@ -60,4 +57,12 @@ export default function HomePage() {
   }
 
   return null; // Should not be reached if logic is correct
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
+  );
 }

@@ -39,3 +39,28 @@ export const getAccount = async (accountId: string) => {
 
   return response.json();
 };
+
+export const getTrades = async () => {
+  const response = await fetch(`${API_URL}/trade`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch trades");
+  }
+
+  return response.json();
+};
+
+export const getTradesByAccount = async (accountId: string) => {
+  const allTrades = await getTrades();
+  return allTrades.filter((trade: any) => trade.account_id === accountId);
+};
+
+export const getTrade = async (tradeId: string) => {
+  const response = await fetch(`${API_URL}/trade/${tradeId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch trade");
+  }
+
+  return response.json();
+};
