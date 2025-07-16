@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import type { TradingAccount } from "@/lib/types"
@@ -15,6 +16,7 @@ interface AccountSelectorProps {
 
 export function AccountSelector({ selectedAccountId, onAccountChange }: AccountSelectorProps) {
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -24,6 +26,8 @@ export function AccountSelector({ selectedAccountId, onAccountChange }: AccountS
       } catch (error) {
         console.error('Failed to fetch accounts:', error)
         setAccounts([])
+      } finally {
+        setIsLoading(false)
       }
     }
     
@@ -32,6 +36,10 @@ export function AccountSelector({ selectedAccountId, onAccountChange }: AccountS
 
   const handleAccountChange = (accountId: string) => {
     onAccountChange(accountId)
+  }
+
+  if (isLoading) {
+    return <Skeleton className="h-10 w-full md:w-[200px]" />
   }
 
   if (accounts.length === 0) {
