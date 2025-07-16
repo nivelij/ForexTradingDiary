@@ -9,8 +9,9 @@ import { getAccounts } from "@/services/api"
 import type { TradingAccount } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { Loading } from "./Loading"
 
 interface AppWrapperProps {
@@ -70,7 +71,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
+                <Image src="/candlestick.png" alt="Trading Diary" width={48} height={48} className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Welcome to Trading Diary</h3>
                 <p className="text-muted-foreground text-center mb-4">
                   Create your first trading account to start tracking your forex trades

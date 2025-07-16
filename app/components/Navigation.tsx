@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ThemeToggle } from "./ThemeToggle"
 import { AccountSelector } from "./AccountSelector"
-import { Menu, Home, Settings, TrendingUp } from "lucide-react"
+import { Menu, Home, Settings } from "lucide-react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 const navigation = [
@@ -29,7 +30,7 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
       <div className="container mx-auto flex h-14 items-center px-4 max-w-7xl">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <TrendingUp className="h-6 w-6" />
+            <Image src="/candlestick.png" alt="Trading Diary" width={24} height={24} className="h-6 w-6" />
             <span className="hidden font-bold sm:inline-block">Trading Diary</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
@@ -59,7 +60,7 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
           </SheetTrigger>
           <SheetContent side="left" className="pr-0">
             <Link href="/" className="flex items-center space-x-2" onClick={() => setOpen(false)}>
-              <TrendingUp className="h-6 w-6" />
+              <Image src="/candlestick.png" alt="Trading Diary" width={24} height={24} className="h-6 w-6" />
               <span className="font-bold">Trading Diary</span>
             </Link>
             <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">

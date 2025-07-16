@@ -11,7 +11,12 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Trading Diary",
   description: "Track and analyze your forex trading performance",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: "/candlestick.png",
+    shortcut: "/candlestick.png",
+    apple: "/candlestick.png"
+  }
 }
 
 export default function RootLayout({
