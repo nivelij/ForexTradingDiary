@@ -359,16 +359,18 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-gray-900">{account.name}</h1>
-            <Button onClick={() => setIsNewTradeModalOpen(true)} className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{account.name}</h1>
+              <p className="text-gray-600 mt-2">
+                Trading Account Dashboard
+              </p>
+            </div>
+            <Button onClick={() => setIsNewTradeModalOpen(true)} className="flex items-center gap-2 w-full mt-4 md:w-auto md:mt-0">
               <Plus className="h-4 w-4" />
               New Trade
             </Button>
           </div>
-          <p className="text-gray-600 mt-2">
-            Trading Account Dashboard
-          </p>
         </div>
 
         {/* Account Details */}
