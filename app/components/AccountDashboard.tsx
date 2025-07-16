@@ -1,27 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   Plus,
-  TrendingUp,
-  TrendingDown,
   Target,
   ArrowUpRight,
   ArrowDownRight,
-  Calendar,
   BarChart3,
-  PieChart,
   Activity,
 } from "lucide-react"
-import Link from "next/link"
 import type { TradingAccount, Trade } from "@/lib/types"
-import { getAccounts, getTradesByAccount } from "@/services/api"
+import { getAccounts, getTrades } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { NewTradeModal } from "./NewTradeModal"
+import { TradeDetailsModal } from "./TradeDetailsModal"
 import { Loading } from "./Loading"
 
 interface AccountDashboardProps {
@@ -40,6 +35,7 @@ const mockTrades: Trade[] = [
     profitLoss: 250,
     retrospective: 'Good entry point, held position well',
     screenshots: [],
+    openDate: '2024-01-20T09:30:00Z',
     createdAt: '2024-01-20T09:30:00Z',
     updatedAt: '2024-01-20T15:45:00Z',
   },
@@ -53,6 +49,7 @@ const mockTrades: Trade[] = [
     profitLoss: -150,
     retrospective: 'Stop loss triggered too early',
     screenshots: [],
+    openDate: '2024-01-22T11:15:00Z',
     createdAt: '2024-01-22T11:15:00Z',
     updatedAt: '2024-01-22T14:20:00Z',
   },
@@ -66,6 +63,7 @@ const mockTrades: Trade[] = [
     profitLoss: 320,
     retrospective: 'Perfect timing on the breakout',
     screenshots: [],
+    openDate: '2024-01-25T08:00:00Z',
     createdAt: '2024-01-25T08:00:00Z',
     updatedAt: '2024-01-25T16:30:00Z',
   },
@@ -79,6 +77,7 @@ const mockTrades: Trade[] = [
     profitLoss: undefined,
     retrospective: undefined,
     screenshots: [],
+    openDate: '2024-01-28T10:45:00Z',
     createdAt: '2024-01-28T10:45:00Z',
     updatedAt: '2024-01-28T10:45:00Z',
   },
@@ -92,6 +91,7 @@ const mockTrades: Trade[] = [
     profitLoss: 180,
     retrospective: 'Good fundamental analysis',
     screenshots: [],
+    openDate: '2024-01-30T13:20:00Z',
     createdAt: '2024-01-30T13:20:00Z',
     updatedAt: '2024-01-30T17:10:00Z',
   },
@@ -134,6 +134,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [account, setAccount] = useState<TradingAccount | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
   const [isNewTradeModalOpen, setIsNewTradeModalOpen] = useState(false)
+  const [selectedTrade, setSelectedTrade] = useState<any>(null)
+  const [isTradeDetailsModalOpen, setIsTradeDetailsModalOpen] = useState(false)
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalProfitLoss: 0,
     winRate: 0,
@@ -171,17 +173,34 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           setAccount(mappedAccount)
         }
         
-        // Still using mock trades for now
-        setTrades(mockTrades)
+        // Fetch trades from API
+        const allTrades = await getTrades()
+        const apiTrades = allTrades.filter((trade: any) => trade.account_id === accountId)
+        // Map API trades to the expected format
+        const mappedTrades = apiTrades.map((trade: any) => ({
+          id: trade.id,
+          accountId: trade.account_id,
+          currencyPair: trade.currency_pair,
+          direction: trade.direction,
+          rationale: trade.rationale,
+          outcome: trade.outcome,
+          profitLoss: trade.profit_loss ? parseFloat(trade.profit_loss) : undefined,
+          retrospective: trade.retrospective,
+          screenshots: [], // API doesn't include screenshots yet
+          openDate: trade.created_at,
+          createdAt: trade.created_at,
+          updatedAt: trade.updated_at,
+        }))
+        setTrades(mappedTrades)
         
-        // Calculate comprehensive analytics using mock data
-        const closedTrades = mockTrades.filter((t) => t.outcome !== "OPEN")
-    const winningTrades = closedTrades.filter((t) => t.outcome === "WIN")
-    const losingTrades = closedTrades.filter((t) => t.outcome === "LOSS")
+        // Calculate comprehensive analytics using API data
+        const closedTrades = mappedTrades.filter((t: Trade) => t.outcome !== "OPEN")
+    const winningTrades = closedTrades.filter((t: Trade) => t.outcome === "WIN")
+    const losingTrades = closedTrades.filter((t: Trade) => t.outcome === "LOSS")
 
-    const totalPL = closedTrades.reduce((sum, trade) => sum + (trade.profitLoss || 0), 0)
-    const totalWins = winningTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0)
-    const totalLosses = Math.abs(losingTrades.reduce((sum, t) => sum + (t.profitLoss || 0), 0))
+    const totalPL = closedTrades.reduce((sum: number, trade: Trade) => sum + (trade.profitLoss || 0), 0)
+    const totalWins = winningTrades.reduce((sum: number, t: Trade) => sum + (t.profitLoss || 0), 0)
+    const totalLosses = Math.abs(losingTrades.reduce((sum: number, t: Trade) => sum + (t.profitLoss || 0), 0))
 
     const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0
     const avgWin = winningTrades.length > 0 ? totalWins / winningTrades.length : 0
@@ -197,8 +216,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     let maxLossStreak = 0
 
     closedTrades
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .forEach((trade) => {
+      .sort((a: Trade, b: Trade) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .forEach((trade: Trade) => {
         if (trade.outcome === "WIN") {
           currentWinStreak++
           currentLossStreak = 0
@@ -215,18 +234,18 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
     // Best and worst trades
     const bestTrade = closedTrades.reduce(
-      (best, trade) => ((trade.profitLoss || 0) > (best?.profitLoss || Number.NEGATIVE_INFINITY) ? trade : best),
+      (best: Trade | null, trade: Trade) => ((trade.profitLoss || 0) > (best?.profitLoss || Number.NEGATIVE_INFINITY) ? trade : best),
       null as Trade | null,
     )
 
     const worstTrade = closedTrades.reduce(
-      (worst, trade) => ((trade.profitLoss || 0) < (worst?.profitLoss || Number.POSITIVE_INFINITY) ? trade : worst),
+      (worst: Trade | null, trade: Trade) => ((trade.profitLoss || 0) < (worst?.profitLoss || Number.POSITIVE_INFINITY) ? trade : worst),
       null as Trade | null,
     )
 
     // Monthly performance
     const monthlyData = new Map<string, { profit: number; trades: number; wins: number }>()
-    closedTrades.forEach((trade) => {
+    closedTrades.forEach((trade: Trade) => {
       const month = new Date(trade.createdAt).toISOString().slice(0, 7) // YYYY-MM
       const existing = monthlyData.get(month) || { profit: 0, trades: 0, wins: 0 }
       monthlyData.set(month, {
@@ -248,7 +267,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
     // Currency pair performance
     const pairData = new Map<string, { profit: number; trades: number; wins: number }>()
-    closedTrades.forEach((trade) => {
+    closedTrades.forEach((trade: Trade) => {
       const existing = pairData.get(trade.currencyPair) || { profit: 0, trades: 0, wins: 0 }
       pairData.set(trade.currencyPair, {
         profit: existing.profit + (trade.profitLoss || 0),
@@ -302,7 +321,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         monthly: monthlyTrades,
       },
     })
-      } catch (error) {
+    } catch (error) {
         console.error('Error fetching account data:', error)
         // Don't set account data if API fails - let the component handle the null state
       }
@@ -321,12 +340,12 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     .slice(0, 5)
 
   const getOutcomeBadge = (outcome: Trade["outcome"]) => {
-    const variants = {
+    const variants: Record<string, "secondary" | "default" | "destructive" | "outline"> = {
       OPEN: "secondary",
-      WIN: "default",
+      WIN: "default", 
       LOSS: "destructive",
       BREAK_EVEN: "outline",
-    } as const
+    }
 
     return <Badge variant={variants[outcome]}>{outcome.replace("_", " ")}</Badge>
   }
@@ -336,296 +355,297 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{account.name}</h1>
-          <p className="text-muted-foreground">Trading Dashboard • {account.currency}</p>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-900">{account.name}</h1>
+            <Button onClick={() => setIsNewTradeModalOpen(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Trade
+            </Button>
+          </div>
+          <p className="text-gray-600 mt-2">
+            Trading Account Dashboard
+          </p>
         </div>
-        <Button onClick={() => setIsNewTradeModalOpen(true)} className="hidden sm:flex">
-          <Plus className="h-4 w-4 mr-2" />
-          New Trade
-        </Button>
-      </div>
 
-      {/* New Trade Button - Mobile */}
-      <div className="sm:hidden">
-        <Button onClick={() => setIsNewTradeModalOpen(true)} className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          New Trade
-        </Button>
-      </div>
-
-      {/* Account Balance Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-2xl font-bold">{formatCurrency(account.currentBalance, account.currency)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Initial Balance</p>
-              <p className="text-lg">{formatCurrency(account.initialBalance, account.currency)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total P/L</p>
-              <p
-                className={`text-lg font-semibold ${analytics.totalProfitLoss >= 0 ? "text-green-600" : "text-red-600"}`}
-              >
-                {formatCurrency(analytics.totalProfitLoss, account.currency)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">P/L %</p>
-              <p
-                className={`text-lg font-semibold ${analytics.totalProfitLoss >= 0 ? "text-green-600" : "text-red-600"}`}
-              >
-                {((analytics.totalProfitLoss / account.initialBalance) * 100).toFixed(2)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Win Rate</p>
-              <p className="text-lg font-semibold">{analytics.winRate.toFixed(1)}%</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {analytics.totalTrades - analytics.openTrades} closed trades
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-
-      {/* Advanced Analytics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Trading Streaks */}
-        <Card>
+        {/* Account Details */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              Trading Streaks
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Max Consecutive Wins</span>
-              <span className="font-semibold text-green-600">{analytics.consecutiveWins}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Max Consecutive Losses</span>
-              <span className="font-semibold text-red-600">{analytics.consecutiveLosses}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total Trades</span>
-              <span className="font-semibold">{analytics.totalTrades}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Open Trades</span>
-              <span className="font-semibold">{analytics.openTrades}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trading Frequency */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Trading Frequency
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Today</span>
-              <span className="font-semibold">{analytics.tradingFrequency.daily} trades</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">This Week</span>
-              <span className="font-semibold">{analytics.tradingFrequency.weekly} trades</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">This Month</span>
-              <span className="font-semibold">{analytics.tradingFrequency.monthly} trades</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Avg per Month</span>
-              <span className="font-semibold">
-                {analytics.totalTrades > 0
-                  ? Math.round(analytics.totalTrades / Math.max(1, analytics.monthlyPerformance.length))
-                  : 0}{" "}
-                trades
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Best/Worst Trades */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <PieChart className="h-5 w-5 mr-2" />
-              Trade Extremes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {analytics.bestTrade ? (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Best Trade</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{analytics.bestTrade.currencyPair}</span>
-                  <span className="font-semibold text-green-600">
-                    {formatCurrency(analytics.bestTrade.profitLoss || 0, account.currency)}
-                  </span>
-                </div>
-              </div>
-            ) : null}
-
-            {analytics.worstTrade ? (
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Worst Trade</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">{analytics.worstTrade.currencyPair}</span>
-                  <span className="font-semibold text-red-600">
-                    {formatCurrency(analytics.worstTrade.profitLoss || 0, account.currency)}
-                  </span>
-                </div>
-              </div>
-            ) : null}
-
-            {!analytics.bestTrade && !analytics.worstTrade && (
-              <p className="text-sm text-muted-foreground">No closed trades yet</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Monthly Performance */}
-      {analytics.monthlyPerformance.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Performance</CardTitle>
-            <CardDescription>Your trading performance over the last 6 months</CardDescription>
+            <CardTitle>Account Details</CardTitle>
+            <CardDescription>Current account balance and performance overview</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {analytics.monthlyPerformance.map((month) => (
-                <div key={month.month} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h3 className="font-semibold">
-                      {new Date(month.month + "-01").toLocaleDateString("en-US", { year: "numeric", month: "long" })}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {month.trades} trades • {month.winRate.toFixed(1)}% win rate
-                    </p>
-                  </div>
-                  <div className={`text-lg font-bold ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatCurrency(month.profit, account.currency)}
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              <div className="space-y-1 md:space-y-2">
+                <p className="text-xs md:text-sm font-medium text-gray-600">Current Balance</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">
+                  {formatCurrency(account.currentBalance, account.currency)}
+                </p>
+              </div>
+              <div className="space-y-1 md:space-y-2">
+                <p className="text-xs md:text-sm font-medium text-gray-600">Initial Balance</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">
+                  {formatCurrency(account.initialBalance, account.currency)}
+                </p>
+              </div>
+              <div className="space-y-1 md:space-y-2">
+                <p className="text-xs md:text-sm font-medium text-gray-600">Total P&L</p>
+                <p className={`text-lg md:text-2xl font-bold ${analytics.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(analytics.totalProfitLoss, account.currency)}
+                </p>
+              </div>
+              <div className="space-y-1 md:space-y-2">
+                <p className="text-xs md:text-sm font-medium text-gray-600">Total P&L (%)</p>
+                <p className={`text-lg md:text-2xl font-bold ${analytics.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {account.initialBalance > 0 ? ((analytics.totalProfitLoss / account.initialBalance) * 100).toFixed(2) : '0.00'}%
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Currency Pair Performance */}
-      {analytics.currencyPairPerformance.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Currency Pair Performance</CardTitle>
-            <CardDescription>Breakdown of your trading performance by currency pair</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analytics.currencyPairPerformance.slice(0, 5).map((pair) => (
-                <div key={pair.pair} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <h3 className="font-semibold">{pair.pair}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {pair.trades} trades • {pair.winRate.toFixed(1)}% win rate • Avg:{" "}
-                      {formatCurrency(pair.avgProfit, account.currency)}
-                    </p>
-                  </div>
-                  <div className={`text-lg font-bold ${pair.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatCurrency(pair.profit, account.currency)}
-                  </div>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Win Rate</p>
+                  <p className="text-2xl font-bold text-blue-600">{analytics.winRate.toFixed(1)}%</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <Target className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Recent Trades */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Recent Trades</CardTitle>
-            <CardDescription>Your latest trading activity</CardDescription>
-          </div>
-          <Button variant="outline" asChild>
-            <Link href={`/reports?accountId=${accountId}`}>View All</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {recentTrades.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground mb-4">No trades recorded yet</p>
-              <Button onClick={() => setIsNewTradeModalOpen(true)}>
-                Record Your First Trade
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentTrades.map((trade) => (
-                <Link key={trade.id} href={`/trade/${trade.id}`}>
-                  <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center">
-                        {trade.direction === "BUY" ? (
-                          <ArrowUpRight className="h-4 w-4 text-green-600" />
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Trades</p>
+                  <p className="text-2xl font-bold text-gray-900">{analytics.totalTrades}</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-gray-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Open Trades</p>
+                  <p className="text-2xl font-bold text-orange-600">{analytics.openTrades}</p>
+                </div>
+                <Activity className="h-8 w-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Trades */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Recent Trades</CardTitle>
+              <CardDescription>Your most recent trading activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentTrades.map((trade) => (
+                  <div 
+                    key={trade.id} 
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setSelectedTrade(trade);
+                      setIsTradeDetailsModalOpen(true);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${
+                        trade.direction === 'BUY' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {trade.direction === 'BUY' ? (
+                          <ArrowUpRight className={`h-4 w-4 ${
+                            trade.direction === 'BUY' ? 'text-green-600' : 'text-red-600'
+                          }`} />
                         ) : (
-                          <ArrowDownRight className="h-4 w-4 text-red-600" />
+                          <ArrowDownRight className={`h-4 w-4 text-red-600`} />
                         )}
                       </div>
                       <div>
                         <p className="font-medium">{trade.currencyPair}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(trade.createdAt).toLocaleDateString()}
-                        </p>
+                        <p className="text-sm text-gray-600">{trade.direction}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {trade.profitLoss !== undefined && (
-                        <span
-                          className={`text-sm font-medium ${trade.profitLoss >= 0 ? "text-green-600" : "text-red-600"}`}
-                        >
-                          {formatCurrency(trade.profitLoss, account.currency)}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-3">
                       {getOutcomeBadge(trade.outcome)}
+                      {trade.profitLoss !== undefined && (
+                        <p className={`font-medium ${
+                          trade.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatCurrency(trade.profitLoss, account.currency)}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* New Trade Modal */}
-      {account && (
-        <NewTradeModal
-          open={isNewTradeModalOpen}
-          onOpenChange={setIsNewTradeModalOpen}
-          accountId={accountId}
-          account={account}
-          onTradeCreated={handleTradeCreated}
-        />
-      )}
+          {/* Performance Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Analytics</CardTitle>
+              <CardDescription>Advanced trading metrics</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Avg Win</span>
+                  <span className="text-sm font-medium text-green-600">
+                    {formatCurrency(analytics.avgWin, account.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Avg Loss</span>
+                  <span className="text-sm font-medium text-red-600">
+                    {formatCurrency(analytics.avgLoss, account.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Risk:Reward</span>
+                  <span className="text-sm font-medium">
+                    1:{analytics.riskRewardRatio.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Profit Factor</span>
+                  <span className="text-sm font-medium">
+                    {analytics.profitFactor === Number.POSITIVE_INFINITY ? '∞' : analytics.profitFactor.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-medium mb-2">Streaks</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Best Win Streak</span>
+                    <span className="text-sm font-medium text-green-600">
+                      {analytics.consecutiveWins}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Worst Loss Streak</span>
+                    <span className="text-sm font-medium text-red-600">
+                      {analytics.consecutiveLosses}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-medium mb-2">Best/Worst Trades</h4>
+                <div className="space-y-2">
+                  {analytics.bestTrade && (
+                    <div className="text-sm">
+                      <span className="text-gray-600">Best: </span>
+                      <span className="font-medium text-green-600">
+                        {analytics.bestTrade.currencyPair} {formatCurrency(analytics.bestTrade.profitLoss || 0, account.currency)}
+                      </span>
+                    </div>
+                  )}
+                  {analytics.worstTrade && (
+                    <div className="text-sm">
+                      <span className="text-gray-600">Worst: </span>
+                      <span className="font-medium text-red-600">
+                        {analytics.worstTrade.currencyPair} {formatCurrency(analytics.worstTrade.profitLoss || 0, account.currency)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          {/* Monthly Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Performance</CardTitle>
+              <CardDescription>Last 6 months trading results</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {analytics.monthlyPerformance.map((month) => (
+                  <div key={month.month} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">{month.month}</p>
+                      <p className="text-sm text-gray-600">{month.trades} trades | {month.winRate.toFixed(1)}% win rate</p>
+                    </div>
+                    <p className={`font-medium ${month.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(month.profit, account.currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Currency Pair Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Currency Pair Performance</CardTitle>
+              <CardDescription>Performance by trading pairs</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {analytics.currencyPairPerformance.slice(0, 8).map((pair) => (
+                  <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">{pair.pair}</p>
+                      <p className="text-sm text-gray-600">
+                        {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(pair.profit, account.currency)}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Avg: {formatCurrency(pair.avgProfit, account.currency)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <NewTradeModal
+        open={isNewTradeModalOpen}
+        onOpenChange={setIsNewTradeModalOpen}
+        onTradeCreated={handleTradeCreated}
+        accountId={accountId}
+        account={account}
+      />
+      
+      <TradeDetailsModal
+        open={isTradeDetailsModalOpen}
+        onOpenChange={setIsTradeDetailsModalOpen}
+        trade={selectedTrade}
+        accountCurrency={account.currency}
+      />
     </div>
   )
 }
