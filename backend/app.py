@@ -7,7 +7,7 @@ from datetime import datetime
 # Define the CORS headers that will be added to every response
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
     "Access-Control-Allow-Credentials": "true"
 }
@@ -46,17 +46,7 @@ def lambda_handler(event, context):
 
     # Handle OPTIONS (preflight) request
     if method == "OPTIONS":
-        print("Handling OPTIONS pre-flight request")
-        return {
-            'statusCode': 204,
-            'headers': {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
-                "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-                "Access-Control-Allow-Credentials": "true"
-            },
-            'body': ''
-        }
+        return build_response(200, {})
 
     try:
         # /account endpoints
@@ -157,18 +147,19 @@ def get_account_by_id(account_id):
 def create_trade(trade_data):
     """Creates a new trade for a given account."""
     sql = """
-        INSERT INTO trades (account_id, currency_pair, direction, rationale, outcome, profit_loss, retrospective)
-        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        INSERT INTO trades (account_id, created_at, currency_pair, direction, rationale, outcome, profit_loss, retrospective, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_DATE) RETURNING id;
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(sql, (
                 trade_data['account_id'],
+                trade_data['created_at'],
                 trade_data['currency_pair'],
                 trade_data['direction'],
                 trade_data['rationale'],
                 trade_data.get('outcome', 'OPEN'),
-                trade_data.get('profit_loss'),
+                trade_data.get('profit_loss', 0),
                 trade_data.get('retrospective')
             ))
             new_id = cur.fetchone()[0]

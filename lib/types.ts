@@ -17,6 +17,7 @@ export interface Trade {
   profitLoss?: number
   retrospective?: string
   screenshots: string[]
+  openDate: string
   createdAt: string
   updatedAt: string
 }

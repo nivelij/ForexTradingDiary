@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { TradingAccount, Trade } from "@/lib/types"
-import { storage } from "@/lib/storage"
+import { DatePicker } from "@/components/ui/date-picker"
+import type { TradingAccount } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
-import { getAccounts } from "@/services/api"
+import { getAccounts, createTrade } from "@/services/api"
 import { Upload, X } from "lucide-react"
 
 const commonPairs = [
@@ -47,6 +47,7 @@ interface TradeFormData {
   profitLoss: string
   retrospective: string
   screenshots: File[]
+  openDate: Date
 }
 
 export default function NewTradePage() {
@@ -64,6 +65,7 @@ export default function NewTradePage() {
     profitLoss: "",
     retrospective: "",
     screenshots: [],
+    openDate: new Date(),
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -137,11 +139,11 @@ export default function NewTradePage() {
     }
 
     // Validate outcome-specific fields
-    if (formData.outcome !== "OPEN") {
-      if (!formData.profitLoss || !formData.retrospective.trim()) {
+    if (formData.outcome !== "OPEN" && formData.outcome !== "BREAK_EVEN") {
+      if (!formData.profitLoss) {
         toast({
           title: "Error",
-          description: "Please provide P/L amount and retrospective analysis for closed trades.",
+          description: "Please provide P/L amount for trades with profit/loss.",
           variant: "destructive",
         })
         return
@@ -151,43 +153,28 @@ export default function NewTradePage() {
     setIsSubmitting(true)
 
     try {
-      // Convert files to base64 for storage
-      const screenshotUrls: string[] = []
-      for (const file of formData.screenshots) {
-        const reader = new FileReader()
-        const base64 = await new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string)
-          reader.readAsDataURL(file)
-        })
-        screenshotUrls.push(base64)
+      // Prepare profit/loss based on outcome
+      let profitLoss: number | undefined
+      if (formData.outcome !== "OPEN" && formData.outcome !== "BREAK_EVEN") {
+        profitLoss = Number.parseFloat(formData.profitLoss) || 0
+      } else if (formData.outcome === "BREAK_EVEN") {
+        profitLoss = 0
       }
 
-      const profitLoss = formData.outcome !== "OPEN" ? Number.parseFloat(formData.profitLoss) || 0 : undefined
-
-      const newTrade: Trade = {
-        id: crypto.randomUUID(),
-        accountId: formData.accountId,
-        currencyPair: formData.currencyPair,
+      // Prepare API payload
+      const tradeData = {
+        account_id: formData.accountId,
+        currency_pair: formData.currencyPair,
         direction: formData.direction,
         rationale: formData.rationale,
         outcome: formData.outcome,
-        profitLoss,
-        retrospective: formData.outcome !== "OPEN" ? formData.retrospective : undefined,
-        screenshots: screenshotUrls,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        profit_loss: profitLoss,
+        retrospective: formData.retrospective || undefined,
+        created_at: formData.openDate.toISOString().split('T')[0],
       }
 
-      storage.saveTrade(newTrade)
-
-      // Update account balance if trade is closed
-      if (formData.outcome !== "OPEN" && profitLoss !== undefined) {
-        const account = accounts.find((acc) => acc.id === formData.accountId)
-        if (account) {
-          const newBalance = account.currentBalance + profitLoss
-          storage.updateAccountBalance(account.id, newBalance)
-        }
-      }
+      // Submit to API
+      await createTrade(tradeData)
 
       toast({
         title: "Trade recorded",
@@ -196,6 +183,7 @@ export default function NewTradePage() {
 
       router.push("/")
     } catch (error) {
+      console.error("Error creating trade:", error)
       toast({
         title: "Error",
         description: "Failed to save trade. Please try again.",
@@ -240,43 +228,73 @@ export default function NewTradePage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
 
+              <div className="space-y-2">
+                <Label htmlFor="account">Account *</Label>
+                <Select
+                  value={formData.accountId}
+                  onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} ({account.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currencyPair">Currency Pair *</Label>
-                  <Select
-                    value={formData.currencyPair}
-                    onValueChange={(value) => setFormData({ ...formData, currencyPair: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select pair" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {commonPairs.map((pair) => (
-                        <SelectItem key={pair} value={pair}>
-                          {pair}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="openDate">Open Date *</Label>
+                  <DatePicker
+                    date={formData.openDate}
+                    onDateChange={(date) => setFormData({ ...formData, openDate: date || new Date() })}
+                    placeholder="Select date"
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="direction">Plan / Direction *</Label>
-                  <Select
-                    value={formData.direction}
-                    onValueChange={(value: "BUY" | "SELL") => setFormData({ ...formData, direction: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BUY">BUY (Long)</SelectItem>
-                      <SelectItem value="SELL">SELL (Short)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currencyPair">Currency Pair *</Label>
+                    <Select
+                      value={formData.currencyPair}
+                      onValueChange={(value) => setFormData({ ...formData, currencyPair: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select pair" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commonPairs.map((pair) => (
+                          <SelectItem key={pair} value={pair}>
+                            {pair}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="direction">Plan / Direction *</Label>
+                    <Select
+                      value={formData.direction}
+                      onValueChange={(value: "BUY" | "SELL") => setFormData({ ...formData, direction: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BUY">BUY (Long)</SelectItem>
+                        <SelectItem value="SELL">SELL (Short)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
@@ -329,15 +347,10 @@ export default function NewTradePage() {
                 />
               </div>
 
-              {formData.outcome !== "OPEN" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="profitLoss">
-                      P/L (Profit/Loss) *
-                      <span className="text-sm text-muted-foreground ml-1">
-                        (Positive for profit, negative for loss)
-                      </span>
-                    </Label>
+              {formData.outcome !== "OPEN" && formData.outcome !== "BREAK_EVEN" && (
+                <div className="space-y-2">
+                  <Label htmlFor="profitLoss">P/L *</Label>
+                  <div className="relative">
                     <Input
                       id="profitLoss"
                       type="number"
@@ -345,22 +358,28 @@ export default function NewTradePage() {
                       value={formData.profitLoss}
                       onChange={(e) => setFormData({ ...formData, profitLoss: e.target.value })}
                       placeholder="e.g., 150.00 or -75.50"
-                      required={formData.outcome !== "OPEN"}
+                      required
+                      className="pr-12"
                     />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
+                      {accounts.find(acc => acc.id === formData.accountId)?.currency || ''}
+                    </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="postTradeAnalysis">Post-Trade Analysis *</Label>
-                    <Textarea
-                      id="postTradeAnalysis"
-                      placeholder="Reflect on the trade execution, what went well, what could be improved, and lessons learned..."
-                      value={formData.retrospective}
-                      onChange={(e) => setFormData({ ...formData, retrospective: e.target.value })}
-                      rows={4}
-                      required={formData.outcome !== "OPEN"}
-                    />
-                  </div>
-                </>
+              {formData.outcome !== "OPEN" && (
+                <div className="space-y-2">
+                  <Label htmlFor="postTradeAnalysis">Post-Trade Analysis *</Label>
+                  <Textarea
+                    id="postTradeAnalysis"
+                    placeholder="Reflect on the trade execution, what went well, what could be improved, and lessons learned..."
+                    value={formData.retrospective}
+                    onChange={(e) => setFormData({ ...formData, retrospective: e.target.value })}
+                    rows={4}
+                    required
+                  />
+                </div>
               )}
             </div>
 

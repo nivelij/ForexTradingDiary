@@ -64,3 +64,28 @@ export const getTrade = async (tradeId: string) => {
 
   return response.json();
 };
+
+export const createTrade = async (tradeData: {
+  account_id: string;
+  currency_pair: string;
+  direction: string;
+  rationale: string;
+  outcome: string;
+  profit_loss?: number;
+  retrospective?: string;
+  created_at: string;
+}) => {
+  const response = await fetch(`${API_URL}/trade`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(tradeData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create trade");
+  }
+
+  return response.json();
+};
