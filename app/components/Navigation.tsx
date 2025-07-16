@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { ThemeToggle } from "./ThemeToggle"
+
 import { AccountSelector } from "./AccountSelector"
 import { Menu, Home, Settings } from "lucide-react"
 import Image from "next/image"
@@ -88,7 +88,7 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
             <div className="flex-1 md:flex-none">
               <AccountSelector selectedAccountId={selectedAccountId} onAccountChange={onAccountChange} />
             </div>
-            <ThemeToggle />
+            
           </div>
         </div>
       </div>
