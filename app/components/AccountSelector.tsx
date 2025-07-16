@@ -46,9 +46,9 @@ export function AccountSelector({ selectedAccountId, onAccountChange }: AccountS
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       <Select value={selectedAccountId} onValueChange={handleAccountChange}>
-        <SelectTrigger className="w-[200px]">
+        <SelectTrigger className="w-full md:w-[200px]">
           <SelectValue placeholder="Select account" />
         </SelectTrigger>
         <SelectContent>
@@ -59,12 +59,6 @@ export function AccountSelector({ selectedAccountId, onAccountChange }: AccountS
           ))}
         </SelectContent>
       </Select>
-      <Button variant="outline" size="sm" asChild>
-        <Link href="/accounts">
-          <Plus className="h-4 w-4 mr-2" />
-          Manage
-        </Link>
-      </Button>
     </div>
   )
 }

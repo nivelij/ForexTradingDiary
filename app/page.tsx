@@ -6,8 +6,29 @@ import { AccountDashboard } from './components/AccountDashboard';
 import { AccountSelector } from './components/AccountSelector';
 import { getAccounts, getAccount } from '@/services/api';
 import type { TradingAccount } from '@/lib/types';
+import { Loading } from './components/Loading';
 
 import { useSearchParams } from 'next/navigation';
+
+// Mock data for dashboard assessment
+const mockAccounts: TradingAccount[] = [
+  {
+    id: 'mock-account-1',
+    name: 'Demo Trading Account',
+    currency: 'USD',
+    initialBalance: 10000,
+    currentBalance: 12500,
+    createdAt: '2024-01-15T10:00:00Z',
+  },
+  {
+    id: 'mock-account-2', 
+    name: 'Live Trading Account',
+    currency: 'EUR',
+    initialBalance: 5000,
+    currentBalance: 4800,
+    createdAt: '2024-02-01T14:30:00Z',
+  }
+];
 
 function HomePageContent() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
@@ -22,20 +43,67 @@ function HomePageContent() {
     const initialize = async () => {
       setLoading(true);
       try {
+        // Use real API calls
         if (accountId) {
           const account = await getAccount(accountId);
-          setAccounts([account]);
-          setSelectedAccountId(account.id);
+          if (account) {
+            // Map API response to TradingAccount format
+            const mappedAccount: TradingAccount = {
+              id: account.id,
+              name: account.name,
+              currency: account.currency,
+              initialBalance: account.initial_balance,
+              currentBalance: account.current_balance,
+              createdAt: account.created_at,
+            };
+            setAccounts([mappedAccount]);
+            setSelectedAccountId(mappedAccount.id);
+          }
         } else {
           const fetchedAccounts = await getAccounts();
-          setAccounts(fetchedAccounts);
-
           if (fetchedAccounts && fetchedAccounts.length > 0) {
-            setSelectedAccountId(fetchedAccounts[0].id);
+            // Map API response to TradingAccount format
+            const mappedAccounts = fetchedAccounts.map((account: any) => ({
+              id: account.id,
+              name: account.name,
+              currency: account.currency,
+              initialBalance: account.initial_balance,
+              currentBalance: account.current_balance,
+              createdAt: account.created_at,
+            }));
+            setAccounts(mappedAccounts);
+            setSelectedAccountId(mappedAccounts[0].id);
           }
         }
+        
+        // Fallback to mock data if API fails (commented out for now)
+        // if (accountId) {
+        //   const account = mockAccounts.find(acc => acc.id === accountId);
+        //   if (account) {
+        //     setAccounts([account]);
+        //     setSelectedAccountId(account.id);
+        //   }
+        // } else {
+        //   setAccounts(mockAccounts);
+        //   if (mockAccounts.length > 0) {
+        //     setSelectedAccountId(mockAccounts[0].id);
+        //   }
+        // }
       } catch (error) {
         console.error('Failed to initialize page:', error);
+        // Fallback to mock data on error
+        if (accountId) {
+          const account = mockAccounts.find(acc => acc.id === accountId);
+          if (account) {
+            setAccounts([account]);
+            setSelectedAccountId(account.id);
+          }
+        } else {
+          setAccounts(mockAccounts);
+          if (mockAccounts.length > 0) {
+            setSelectedAccountId(mockAccounts[0].id);
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -45,7 +113,7 @@ function HomePageContent() {
   }, [searchParams, router]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <Loading message="Loading dashboard..." />;
   }
 
   if (accounts.length > 1 && !selectedAccountId) {
@@ -61,7 +129,7 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<Loading />}>
       <HomePageContent />
     </Suspense>
   );

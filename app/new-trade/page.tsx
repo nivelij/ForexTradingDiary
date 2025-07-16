@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { TradingAccount, Trade } from "@/lib/types"
 import { storage } from "@/lib/storage"
 import { useToast } from "@/hooks/use-toast"
+import { getAccounts } from "@/services/api"
 import { Upload, X } from "lucide-react"
 
 const commonPairs = [
@@ -67,12 +68,35 @@ export default function NewTradePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const loadedAccounts = storage.getAccounts()
-    setAccounts(loadedAccounts)
+    const loadAccounts = async () => {
+      try {
+        const apiAccounts = await getAccounts()
+        const mappedAccounts: TradingAccount[] = apiAccounts.map((acc: any) => ({
+          id: acc.id,
+          name: acc.name,
+          currency: acc.currency,
+          initialBalance: parseFloat(acc.initial_balance),
+          currentBalance: parseFloat(acc.current_balance),
+          createdAt: acc.created_at,
+        }))
+        setAccounts(mappedAccounts)
 
-    if (loadedAccounts.length === 1 && !formData.accountId) {
-      setFormData((prev) => ({ ...prev, accountId: loadedAccounts[0].id }))
+        if (mappedAccounts.length === 1 && !formData.accountId) {
+          setFormData((prev) => ({ ...prev, accountId: mappedAccounts[0].id }))
+        }
+      } catch (error) {
+        console.error('Error loading accounts:', error)
+        // Fallback to local storage if API fails
+        const loadedAccounts = storage.getAccounts()
+        setAccounts(loadedAccounts)
+
+        if (loadedAccounts.length === 1 && !formData.accountId) {
+          setFormData((prev) => ({ ...prev, accountId: loadedAccounts[0].id }))
+        }
+      }
     }
+
+    loadAccounts()
   }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,25 +240,6 @@ export default function NewTradePage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Basic Information</h3>
 
-              <div className="space-y-2">
-                <Label htmlFor="account">Trading Account *</Label>
-                <Select
-                  value={formData.accountId}
-                  onValueChange={(value) => setFormData({ ...formData, accountId: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} ({account.currency})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -313,6 +318,17 @@ export default function NewTradePage() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="retrospective">Retrospective (Optional)</Label>
+                <Textarea
+                  id="retrospective"
+                  placeholder="Reflect on your trading plan, setup, or any observations..."
+                  value={formData.retrospective}
+                  onChange={(e) => setFormData({ ...formData, retrospective: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
               {formData.outcome !== "OPEN" && (
                 <>
                   <div className="space-y-2">
@@ -334,9 +350,9 @@ export default function NewTradePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="retrospective">Retrospective Analysis *</Label>
+                    <Label htmlFor="postTradeAnalysis">Post-Trade Analysis *</Label>
                     <Textarea
-                      id="retrospective"
+                      id="postTradeAnalysis"
                       placeholder="Reflect on the trade execution, what went well, what could be improved, and lessons learned..."
                       value={formData.retrospective}
                       onChange={(e) => setFormData({ ...formData, retrospective: e.target.value })}

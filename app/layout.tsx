@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Forex Trading Diary",
+  title: "Trading Diary",
   description: "Track and analyze your forex trading performance",
     generator: 'v0.dev'
 }

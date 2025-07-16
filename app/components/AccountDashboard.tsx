@@ -17,14 +17,85 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import type { TradingAccount, Trade } from "@/lib/types"
-import { getAccount, getTradesByAccount } from "@/services/api"
+import { getAccounts, getTradesByAccount } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { NewTradeModal } from "./NewTradeModal"
+import { Loading } from "./Loading"
 
 interface AccountDashboardProps {
   accountId: string
 }
+
+
+const mockTrades: Trade[] = [
+  {
+    id: 'trade-1',
+    accountId: 'mock-account-1',
+    currencyPair: 'EUR/USD',
+    direction: 'BUY',
+    rationale: 'Strong upward trend with good support levels',
+    outcome: 'WIN',
+    profitLoss: 250,
+    retrospective: 'Good entry point, held position well',
+    screenshots: [],
+    createdAt: '2024-01-20T09:30:00Z',
+    updatedAt: '2024-01-20T15:45:00Z',
+  },
+  {
+    id: 'trade-2',
+    accountId: 'mock-account-1',
+    currencyPair: 'GBP/USD',
+    direction: 'SELL',
+    rationale: 'Bearish pattern formation',
+    outcome: 'LOSS',
+    profitLoss: -150,
+    retrospective: 'Stop loss triggered too early',
+    screenshots: [],
+    createdAt: '2024-01-22T11:15:00Z',
+    updatedAt: '2024-01-22T14:20:00Z',
+  },
+  {
+    id: 'trade-3',
+    accountId: 'mock-account-1',
+    currencyPair: 'USD/JPY',
+    direction: 'BUY',
+    rationale: 'Breakout above resistance',
+    outcome: 'WIN',
+    profitLoss: 320,
+    retrospective: 'Perfect timing on the breakout',
+    screenshots: [],
+    createdAt: '2024-01-25T08:00:00Z',
+    updatedAt: '2024-01-25T16:30:00Z',
+  },
+  {
+    id: 'trade-4',
+    accountId: 'mock-account-1',
+    currencyPair: 'AUD/USD',
+    direction: 'SELL',
+    rationale: 'Commodity weakness affecting AUD',
+    outcome: 'OPEN',
+    profitLoss: undefined,
+    retrospective: undefined,
+    screenshots: [],
+    createdAt: '2024-01-28T10:45:00Z',
+    updatedAt: '2024-01-28T10:45:00Z',
+  },
+  {
+    id: 'trade-5',
+    accountId: 'mock-account-1',
+    currencyPair: 'EUR/GBP',
+    direction: 'BUY',
+    rationale: 'ECB policy divergence',
+    outcome: 'WIN',
+    profitLoss: 180,
+    retrospective: 'Good fundamental analysis',
+    screenshots: [],
+    createdAt: '2024-01-30T13:20:00Z',
+    updatedAt: '2024-01-30T17:10:00Z',
+  },
+];
 
 interface AnalyticsData {
   totalProfitLoss: number
@@ -35,7 +106,6 @@ interface AnalyticsData {
   avgLoss: number
   riskRewardRatio: number
   profitFactor: number
-  maxDrawdown: number
   consecutiveWins: number
   consecutiveLosses: number
   bestTrade: Trade | null
@@ -63,6 +133,7 @@ interface AnalyticsData {
 export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [account, setAccount] = useState<TradingAccount | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
+  const [isNewTradeModalOpen, setIsNewTradeModalOpen] = useState(false)
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalProfitLoss: 0,
     winRate: 0,
@@ -72,7 +143,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     avgLoss: 0,
     riskRewardRatio: 0,
     profitFactor: 0,
-    maxDrawdown: 0,
     consecutiveWins: 0,
     consecutiveLosses: 0,
     bestTrade: null,
@@ -85,14 +155,27 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const selectedAccount = await getAccount(accountId)
-        setAccount(selectedAccount || null)
-
-        const accountTrades = await getTradesByAccount(accountId)
-        setTrades(accountTrades)
-
-        // Calculate comprehensive analytics
-    const closedTrades = accountTrades.filter((t) => t.outcome !== "OPEN")
+        // Fetch all accounts from API and find the one with matching ID
+        const accounts = await getAccounts()
+        const selectedAccount = accounts.find((acc: any) => acc.id === accountId)
+        if (selectedAccount) {
+          // Map API response to TradingAccount format
+          const mappedAccount: TradingAccount = {
+            id: selectedAccount.id,
+            name: selectedAccount.name,
+            currency: selectedAccount.currency,
+            initialBalance: parseFloat(selectedAccount.initial_balance),
+            currentBalance: parseFloat(selectedAccount.current_balance),
+            createdAt: selectedAccount.created_at,
+          }
+          setAccount(mappedAccount)
+        }
+        
+        // Still using mock trades for now
+        setTrades(mockTrades)
+        
+        // Calculate comprehensive analytics using mock data
+        const closedTrades = mockTrades.filter((t) => t.outcome !== "OPEN")
     const winningTrades = closedTrades.filter((t) => t.outcome === "WIN")
     const losingTrades = closedTrades.filter((t) => t.outcome === "LOSS")
 
@@ -106,23 +189,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0
     const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Number.POSITIVE_INFINITY : 0
 
-    // Calculate max drawdown
-    let runningBalance = selectedAccount?.initialBalance || 0
-    let peak = runningBalance
-    let maxDrawdown = 0
-
-    closedTrades
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .forEach((trade) => {
-        runningBalance += trade.profitLoss || 0
-        if (runningBalance > peak) {
-          peak = runningBalance
-        }
-        const drawdown = ((peak - runningBalance) / peak) * 100
-        if (drawdown > maxDrawdown) {
-          maxDrawdown = drawdown
-        }
-      })
 
     // Calculate consecutive wins/losses
     let currentWinStreak = 0
@@ -207,24 +273,23 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     const oneWeek = 7 * oneDay
     const oneMonth = 30 * oneDay
 
-    const dailyTrades = accountTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneDay).length
+    const dailyTrades = mockTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneDay).length
 
-    const weeklyTrades = accountTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneWeek).length
+    const weeklyTrades = mockTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneWeek).length
 
-    const monthlyTrades = accountTrades.filter(
+    const monthlyTrades = mockTrades.filter(
       (t) => now.getTime() - new Date(t.createdAt).getTime() <= oneMonth,
     ).length
 
     setAnalytics({
       totalProfitLoss: totalPL,
       winRate,
-      totalTrades: accountTrades.length,
-      openTrades: accountTrades.filter((t) => t.outcome === "OPEN").length,
+      totalTrades: mockTrades.length,
+      openTrades: mockTrades.filter((t) => t.outcome === "OPEN").length,
       avgWin,
       avgLoss,
       riskRewardRatio,
       profitFactor,
-      maxDrawdown,
       consecutiveWins: maxWinStreak,
       consecutiveLosses: maxLossStreak,
       bestTrade,
@@ -239,13 +304,17 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     })
       } catch (error) {
         console.error('Error fetching account data:', error)
-        setAccount(null)
-        setTrades([])
+        // Don't set account data if API fails - let the component handle the null state
       }
     }
     
     fetchData()
   }, [accountId])
+
+  const handleTradeCreated = () => {
+    // Refresh the dashboard data when a new trade is created
+    window.location.reload()
+  }
 
   const recentTrades = trades
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -263,7 +332,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   }
 
   if (!account) {
-    return <div>Account not found</div>
+    return <Loading message="Loading account data..." />
   }
 
   return (
@@ -273,11 +342,17 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           <h1 className="text-3xl font-bold tracking-tight">{account.name}</h1>
           <p className="text-muted-foreground">Trading Dashboard • {account.currency}</p>
         </div>
-        <Button asChild>
-          <Link href={`/new-trade?accountId=${accountId}`}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Trade
-          </Link>
+        <Button onClick={() => setIsNewTradeModalOpen(true)} className="hidden sm:flex">
+          <Plus className="h-4 w-4 mr-2" />
+          New Trade
+        </Button>
+      </div>
+
+      {/* New Trade Button - Mobile */}
+      <div className="sm:hidden">
+        <Button onClick={() => setIsNewTradeModalOpen(true)} className="w-full">
+          <Plus className="h-4 w-4 mr-2" />
+          New Trade
         </Button>
       </div>
 
@@ -287,7 +362,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           <CardTitle>Account Balance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Current Balance</p>
               <p className="text-2xl font-bold">{formatCurrency(account.currentBalance, account.currency)}</p>
@@ -312,79 +387,17 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                 {((analytics.totalProfitLoss / account.initialBalance) * 100).toFixed(2)}%
               </p>
             </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Win Rate</p>
+              <p className="text-lg font-semibold">{analytics.winRate.toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {analytics.totalTrades - analytics.openTrades} closed trades
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Core Performance Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{analytics.winRate.toFixed(1)}%</div>
-            <Progress value={analytics.winRate} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.totalTrades - analytics.openTrades} closed trades
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Risk/Reward</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analytics.riskRewardRatio > 0 ? analytics.riskRewardRatio.toFixed(2) : "N/A"}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Avg Win: {formatCurrency(analytics.avgWin, account.currency)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Avg Loss: {formatCurrency(analytics.avgLoss, account.currency)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profit Factor</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analytics.profitFactor === Number.POSITIVE_INFINITY ? "∞" : analytics.profitFactor.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {analytics.profitFactor >= 1.5
-                ? "Excellent"
-                : analytics.profitFactor >= 1.2
-                  ? "Good"
-                  : analytics.profitFactor >= 1.0
-                    ? "Break Even"
-                    : "Needs Improvement"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Max Drawdown</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{analytics.maxDrawdown.toFixed(1)}%</div>
-            <Progress value={Math.min(analytics.maxDrawdown, 100)} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {analytics.maxDrawdown < 5 ? "Low Risk" : analytics.maxDrawdown < 15 ? "Moderate Risk" : "High Risk"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Advanced Analytics */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -561,8 +574,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           {recentTrades.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-muted-foreground mb-4">No trades recorded yet</p>
-              <Button asChild>
-                <Link href={`/new-trade?accountId=${accountId}`}>Record Your First Trade</Link>
+              <Button onClick={() => setIsNewTradeModalOpen(true)}>
+                Record Your First Trade
               </Button>
             </div>
           ) : (
@@ -602,6 +615,17 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* New Trade Modal */}
+      {account && (
+        <NewTradeModal
+          open={isNewTradeModalOpen}
+          onOpenChange={setIsNewTradeModalOpen}
+          accountId={accountId}
+          account={account}
+          onTradeCreated={handleTradeCreated}
+        />
+      )}
     </div>
   )
 }

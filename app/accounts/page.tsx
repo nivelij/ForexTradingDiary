@@ -20,13 +20,40 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { getAccounts } from "@/services/api"
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    setAccounts(storage.getAccounts())
+    const fetchAccounts = async () => {
+      try {
+        const fetchedAccounts = await getAccounts()
+        const mappedAccounts = fetchedAccounts.map((account: any) => ({
+          id: account.id,
+          name: account.name,
+          currency: account.currency,
+          initialBalance: account.initial_balance,
+          currentBalance: account.current_balance,
+          createdAt: account.created_at,
+        }))
+        setAccounts(mappedAccounts)
+      } catch (error) {
+        console.error("Failed to fetch accounts:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load accounts. Falling back to local storage.",
+          variant: "destructive",
+        })
+        setAccounts(storage.getAccounts())
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchAccounts()
   }, [])
 
   const handleDeleteAccount = (accountId: string) => {
@@ -38,6 +65,36 @@ export default function AccountsPage() {
     })
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Trading Accounts</h1>
+            <p className="text-muted-foreground">Manage your forex trading accounts</p>
+          </div>
+        </div>
+        
+        {/* New Account Button - Mobile */}
+        <div className="sm:hidden">
+          <Button asChild className="w-full">
+            <Link href="/accounts/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Account
+            </Link>
+          </Button>
+        </div>
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+            <p className="text-muted-foreground">Loading accounts...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -45,7 +102,11 @@ export default function AccountsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Trading Accounts</h1>
           <p className="text-muted-foreground">Manage your forex trading accounts</p>
         </div>
-        <Button asChild>
+      </div>
+
+      {/* New Account Button - Mobile */}
+      <div className="sm:hidden">
+        <Button asChild className="w-full">
           <Link href="/accounts/new">
             <Plus className="h-4 w-4 mr-2" />
             New Account

@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Plus } from "lucide-react"
 import Link from "next/link"
+import { Loading } from "./Loading"
 
 interface AppWrapperProps {
   children: React.ReactNode
@@ -57,11 +58,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    )
+    return <Loading message="Loading accounts..." />
   }
 
   // Show account creation prompt if no accounts exist
@@ -74,7 +71,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
             <Card className="w-full max-w-md">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Welcome to Forex Trading Diary</h3>
+                <h3 className="text-lg font-semibold mb-2">Welcome to Trading Diary</h3>
                 <p className="text-muted-foreground text-center mb-4">
                   Create your first trading account to start tracking your forex trades
                 </p>
@@ -95,7 +92,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
   return (
     <div className="min-h-screen bg-background">
       <Navigation selectedAccountId={selectedAccountId} onAccountChange={handleAccountChange} />
-      <main className="container mx-auto px-4 py-6 max-w-7xl">{children}</main>
+      <main className="w-full px-4 py-6 md:container md:mx-auto md:max-w-7xl">{children}</main>
     </div>
   )
 }
