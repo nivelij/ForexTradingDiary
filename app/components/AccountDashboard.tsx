@@ -355,7 +355,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   }
 
   return (
-    <div className="p-4">
+    <div className="space-y-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">

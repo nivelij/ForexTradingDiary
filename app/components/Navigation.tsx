@@ -71,7 +71,7 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-foreground/80",
+                      "flex items-center space-x-2 text-base font-medium transition-colors hover:text-foreground/80",
                       pathname === item.href ? "text-foreground" : "text-foreground/60",
                     )}
                   >
