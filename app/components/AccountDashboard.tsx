@@ -361,7 +361,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{account.name}</h1>
               <p className="text-gray-600 mt-2">
                 Trading Account Dashboard
               </p>
