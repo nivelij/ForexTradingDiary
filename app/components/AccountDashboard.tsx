@@ -102,8 +102,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
         {/* Recent Trades */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
           <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
+          <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
           <AnalyticsPanel analytics={analytics} account={account} />
         </div>
 
