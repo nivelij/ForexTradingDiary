@@ -15,7 +15,8 @@ import { TradeDetailsModal } from "./TradeDetailsModal"
 import { Loading } from "./Loading"
 import { AccountDetails } from "./dashboard/AccountDetails"
 import { AccountMetrics } from "./dashboard/AccountMetrics"
-import { RecentTrades } from "./dashboard/RecentTrades"
+import { RecentClosedTrades } from "./dashboard/RecentClosedTrades"
+import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
 
 interface AccountDashboardProps {
@@ -101,7 +102,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
         {/* Recent Trades */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <RecentTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
+          <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
+          <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
           <AnalyticsPanel analytics={analytics} account={account} />
         </div>
 

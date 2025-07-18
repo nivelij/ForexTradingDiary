@@ -193,8 +193,11 @@ def get_trade_by_id(trade_id):
     return trade
 
 def update_trade(trade_id, trade_data):
-    """Updates an existing trade."""
-    sql = """
+    """Updates an existing trade and recalculates account balance."""
+    # First get the account_id from the trade being updated
+    get_account_sql = "SELECT account_id FROM trades WHERE id = %s;"
+    
+    update_sql = """
         UPDATE trades
         SET 
             currency_pair = %s,
@@ -206,9 +209,30 @@ def update_trade(trade_id, trade_data):
             updated_at = now()
         WHERE id = %s;
     """
+    
+    # Recalculate account balance based on all trades for this account
+    balance_update_sql = """
+        UPDATE trading_accounts 
+        SET current_balance = initial_balance + COALESCE(
+            (SELECT SUM(profit_loss) 
+             FROM trades 
+             WHERE account_id = %s AND profit_loss IS NOT NULL), 
+            0
+        )
+        WHERE id = %s;
+    """
+    
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (
+            # Get the account_id
+            cur.execute(get_account_sql, (trade_id,))
+            result = cur.fetchone()
+            if not result:
+                raise Exception(f"Trade with ID {trade_id} not found.")
+            account_id = result[0]
+            
+            # Update the trade
+            cur.execute(update_sql, (
                 trade_data['currency_pair'],
                 trade_data['direction'],
                 trade_data['rationale'],
@@ -217,8 +241,12 @@ def update_trade(trade_id, trade_data):
                 trade_data.get('retrospective'),
                 trade_id
             ))
+            
+            # Recalculate and update the account balance
+            cur.execute(balance_update_sql, (account_id, account_id))
+            
             conn.commit()
-    return {'message': f'Trade {trade_id} updated successfully'}
+    return {'message': f'Trade {trade_id} updated successfully and account balance recalculated'}
 
 def get_analytics(account_id):
     """Retrieves analytics for a given account."""

@@ -23,6 +23,8 @@ export const CURRENCY_PAIRS = [
   "EUR/CAD",
   "GBP/CAD",
   "AUD/CAD",
+  "XAUEUR",
+  "US500",
 ] as const;
 
 export const TRADE_OUTCOMES = [
