@@ -1,11 +1,10 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 import type { Trade, TradingAccount } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
-import { getOutcomeBadgeVariant, getOutcomeDisplayText, getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
+import { getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
 
 interface RecentClosedTradesProps {
   trades: Trade[]
@@ -14,9 +13,6 @@ interface RecentClosedTradesProps {
 }
 
 export function RecentClosedTrades({ trades, account, onTradeClick }: RecentClosedTradesProps) {
-  const getOutcomeBadge = (outcome: Trade["outcome"]) => {
-    return <Badge variant={getOutcomeBadgeVariant(outcome)}>{getOutcomeDisplayText(outcome)}</Badge>
-  }
 
   const recentClosedTrades = trades
     .filter(trade => trade.outcome !== 'OPEN')
@@ -54,7 +50,6 @@ export function RecentClosedTrades({ trades, account, onTradeClick }: RecentClos
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {getOutcomeBadge(trade.outcome)}
                   {trade.profitLoss !== undefined && (
                     <p className={`font-medium ${getProfitLossClassName(trade.profitLoss)}`}>
                       {formatCurrency(trade.profitLoss, account.currency)}

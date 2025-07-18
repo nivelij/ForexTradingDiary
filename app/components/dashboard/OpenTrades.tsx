@@ -1,11 +1,9 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Radio } from "lucide-react"
 import type { Trade, TradingAccount } from "@/lib/types"
-import { formatCurrency } from "@/lib/utils"
-import { getOutcomeBadgeVariant, getOutcomeDisplayText, getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
+import { getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
 
 interface OpenTradesProps {
   trades: Trade[]
@@ -14,9 +12,6 @@ interface OpenTradesProps {
 }
 
 export function OpenTrades({ trades, account, onTradeClick }: OpenTradesProps) {
-  const getOutcomeBadge = (outcome: Trade["outcome"]) => {
-    return <Badge variant={getOutcomeBadgeVariant(outcome)}>{getOutcomeDisplayText(outcome)}</Badge>
-  }
 
   const openTrades = trades
     .filter(trade => trade.outcome === 'OPEN')
@@ -53,12 +48,10 @@ export function OpenTrades({ trades, account, onTradeClick }: OpenTradesProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {getOutcomeBadge(trade.outcome)}
-                  {trade.profitLoss !== undefined && trade.profitLoss !== null && (
-                    <p className={`font-medium ${getProfitLossClassName(trade.profitLoss)}`}>
-                      {formatCurrency(trade.profitLoss, account.currency)}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full border border-green-200">
+                    <Radio className="h-3 w-3 text-green-500 animate-pulse" />
+                    <span className="text-xs font-medium text-green-600 animate-pulse">LIVE</span>
+                  </div>
                 </div>
               </div>
             ))
