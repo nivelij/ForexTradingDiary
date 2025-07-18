@@ -115,7 +115,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.monthlyPerformance.map((month) => (
+                {analytics.monthlyPerformance?.map((month) => (
                   <div key={month.month} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">{month.month}</p>
@@ -138,7 +138,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {analytics.currencyPairPerformance.slice(0, 8).map((pair) => (
+                {analytics.currencyPairPerformance?.slice(0, 8).map((pair) => (
                   <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">{pair.pair}</p>
@@ -176,6 +176,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         onOpenChange={setIsTradeDetailsModalOpen}
         trade={selectedTrade}
         accountCurrency={account.currency}
+        onTradeUpdated={fetchData}
       />
     </div>
   )

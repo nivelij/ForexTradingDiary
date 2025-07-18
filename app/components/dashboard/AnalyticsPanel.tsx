@@ -22,25 +22,25 @@ export function AnalyticsPanel({ analytics, account }: AnalyticsPanelProps) {
           <div className="flex justify-between">
             <span className="text-sm text-gray-600">Avg Win</span>
             <span className="text-sm font-medium text-green-600">
-              {formatCurrency(analytics.avgWin, account.currency)}
+              {formatCurrency(analytics.avgWin || 0, account.currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-600">Avg Loss</span>
             <span className="text-sm font-medium text-red-600">
-              {formatCurrency(analytics.avgLoss, account.currency)}
+              {formatCurrency(analytics.avgLoss || 0, account.currency)}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-600">Risk:Reward</span>
             <span className="text-sm font-medium">
-              1:{analytics.riskRewardRatio.toFixed(2)}
+              1:{(analytics.riskRewardRatio || 0).toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-sm text-gray-600">Profit Factor</span>
             <span className="text-sm font-medium">
-              {analytics.profitFactor === Number.POSITIVE_INFINITY ? '∞' : analytics.profitFactor.toFixed(2)}
+              {analytics.profitFactor === Number.POSITIVE_INFINITY ? '∞' : (analytics.profitFactor || 0).toFixed(2)}
             </span>
           </div>
         </div>
@@ -51,13 +51,13 @@ export function AnalyticsPanel({ analytics, account }: AnalyticsPanelProps) {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Best Win Streak</span>
               <span className="text-sm font-medium text-green-600">
-                {analytics.consecutiveWins}
+                {analytics.consecutiveWins || 0}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Worst Loss Streak</span>
               <span className="text-sm font-medium text-red-600">
-                {analytics.consecutiveLosses}
+                {analytics.consecutiveLosses || 0}
               </span>
             </div>
           </div>
