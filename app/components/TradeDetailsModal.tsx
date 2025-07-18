@@ -13,8 +13,10 @@ import { Badge } from "@/components/ui/badge"
 import { DatePicker } from "@/components/ui/date-picker"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
+import { updateTrade } from "@/services/api"
 
 interface Trade {
+  id: string
   id: string
   account_id: string
   currency_pair: string
@@ -119,8 +121,10 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
     setIsSubmitting(true)
 
     try {
-      // TODO: Implement API call to update trade
-      // const updatedTrade = await updateTrade(trade.id, formData)
+      await updateTrade(trade.id, {
+        ...formData,
+        profit_loss: formData.outcome === "OPEN" || formData.outcome === "BREAK_EVEN" ? null : parseFloat(formData.profit_loss),
+      });
       
       toast({
         title: "Trade updated",
@@ -129,6 +133,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
 
       setIsEditing(false)
       onTradeUpdated?.()
+      onOpenChange(false) // Close the modal
     } catch (error) {
       console.error("Error updating trade:", error)
       toast({
@@ -182,7 +187,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
             </div>
             
             <div className="text-sm text-muted-foreground">
-              Opened: {trade.created_at ? format(new Date(trade.created_at), "PPP") : "Date not available"}
+              <div>Last Updated: {trade.updated_at ? format(new Date(trade.updated_at), "PPP") : "Date not available"}</div>
             </div>
           </div>
 

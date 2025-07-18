@@ -73,12 +73,20 @@ def lambda_handler(event, context):
             return build_response(200, response)
         
         elif path == "/trade" and method == "GET":
-            response = get_all_trades()
+            trade_id = query_params.get('id')
+            if trade_id:
+                response = get_trade_by_id(trade_id)
+            else:
+                response = get_all_trades()
             return build_response(200, response)
         
-        elif path and path.startswith("/trade/") and method == "GET":
-            trade_id = path_parameters.get('id') or path.split('/')[-1]
-            response = get_trade_by_id(trade_id)
+        elif path == "/trade" and method == "PATCH":
+            if not body:
+                return build_response(400, {"error": "Missing request body"})
+            trade_id = query_params.get('id')
+            if not trade_id:
+                return build_response(400, {"error": "Missing trade id in query parameters"})
+            response = update_trade(trade_id, body)
             return build_response(200, response)
         
         # /analytics endpoints
@@ -183,6 +191,34 @@ def get_trade_by_id(trade_id):
     if trade is None:
         raise Exception(f"Trade with ID {trade_id} not found.")
     return trade
+
+def update_trade(trade_id, trade_data):
+    """Updates an existing trade."""
+    sql = """
+        UPDATE trades
+        SET 
+            currency_pair = %s,
+            direction = %s,
+            rationale = %s,
+            outcome = %s,
+            profit_loss = %s,
+            retrospective = %s,
+            updated_at = now()
+        WHERE id = %s;
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (
+                trade_data['currency_pair'],
+                trade_data['direction'],
+                trade_data['rationale'],
+                trade_data.get('outcome', 'OPEN'),
+                trade_data.get('profit_loss', 0),
+                trade_data.get('retrospective'),
+                trade_id
+            ))
+            conn.commit()
+    return {'message': f'Trade {trade_id} updated successfully'}
 
 def get_analytics(account_id):
     """Retrieves analytics for a given account."""

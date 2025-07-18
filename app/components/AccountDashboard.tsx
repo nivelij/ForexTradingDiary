@@ -12,7 +12,7 @@ import {
   Activity,
 } from "lucide-react"
 import type { TradingAccount, Trade } from "@/lib/types"
-import { getAccounts, getTrades } from "@/services/api"
+import { getAccounts, getTrades, getTrade } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { NewTradeModal } from "./NewTradeModal"
@@ -153,6 +153,188 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     currencyPairPerformance: [],
     tradingFrequency: { daily: 0, weekly: 0, monthly: 0 },
   })
+
+  const fetchData = async () => {
+    try {
+      // Fetch all accounts from API and find the one with matching ID
+      const accounts = await getAccounts()
+      const selectedAccount = accounts.find((acc: any) => acc.id === accountId)
+      if (selectedAccount) {
+        // Map API response to TradingAccount format
+        const mappedAccount: TradingAccount = {
+          id: selectedAccount.id,
+          name: selectedAccount.name,
+          currency: selectedAccount.currency,
+          initialBalance: parseFloat(selectedAccount.initial_balance),
+          currentBalance: parseFloat(selectedAccount.current_balance),
+          createdAt: selectedAccount.created_at,
+        }
+        setAccount(mappedAccount)
+      }
+      
+      // Fetch trades from API
+      const allTrades = await getTrades()
+      const apiTrades = allTrades.filter((trade: any) => trade.account_id === accountId)
+      // Map API trades to the expected format
+      const mappedTrades = apiTrades.map((trade: any) => ({
+        id: trade.id,
+        accountId: trade.account_id,
+        currencyPair: trade.currency_pair,
+        direction: trade.direction,
+        rationale: trade.rationale,
+        outcome: trade.outcome,
+        profitLoss: trade.profit_loss ? parseFloat(trade.profit_loss) : undefined,
+        retrospective: trade.retrospective,
+        screenshots: [], // API doesn't include screenshots yet
+        openDate: trade.created_at,
+        createdAt: trade.created_at,
+        updatedAt: trade.updated_at,
+      }))
+      setTrades(mappedTrades)
+      
+      // Calculate comprehensive analytics using API data
+      const closedTrades = mappedTrades.filter((t: Trade) => t.outcome !== "OPEN")
+  const winningTrades = closedTrades.filter((t: Trade) => t.outcome === "WIN")
+  const losingTrades = closedTrades.filter((t: Trade) => t.outcome === "LOSS")
+
+  const totalPL = closedTrades.reduce((sum: number, trade: Trade) => sum + (trade.profitLoss || 0), 0)
+  const totalWins = winningTrades.reduce((sum: number, t: Trade) => sum + (t.profitLoss || 0), 0)
+  const totalLosses = Math.abs(losingTrades.reduce((sum: number, t: Trade) => sum + (t.profitLoss || 0), 0))
+
+  const winRate = closedTrades.length > 0 ? (winningTrades.length / closedTrades.length) * 100 : 0
+  const avgWin = winningTrades.length > 0 ? totalWins / winningTrades.length : 0
+  const avgLoss = losingTrades.length > 0 ? totalLosses / losingTrades.length : 0
+  const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : 0
+  const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Number.POSITIVE_INFINITY : 0
+
+
+  // Calculate consecutive wins/losses
+  let currentWinStreak = 0
+  let currentLossStreak = 0
+  let maxWinStreak = 0
+  let maxLossStreak = 0
+
+  closedTrades
+    .sort((a: Trade, b: Trade) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .forEach((trade: Trade) => {
+      if (trade.outcome === "WIN") {
+        currentWinStreak++
+        currentLossStreak = 0
+        maxWinStreak = Math.max(maxWinStreak, currentWinStreak)
+      } else if (trade.outcome === "LOSS") {
+        currentLossStreak++
+        currentWinStreak = 0
+        maxLossStreak = Math.max(maxLossStreak, currentLossStreak)
+      } else {
+        currentWinStreak = 0
+        currentLossStreak = 0
+      }
+    })
+
+  // Best and worst trades
+  const bestTrade = closedTrades.reduce(
+    (best: Trade | null, trade: Trade) => ((trade.profitLoss || 0) > (best?.profitLoss || Number.NEGATIVE_INFINITY) ? trade : best),
+    null as Trade | null,
+  )
+
+  const worstTrade = closedTrades.reduce(
+    (worst: Trade | null, trade: Trade) => ((trade.profitLoss || 0) < (worst?.profitLoss || Number.POSITIVE_INFINITY) ? trade : worst),
+    null as Trade | null,
+  )
+
+  // Monthly performance
+  const monthlyData = new Map<string, { profit: number; trades: number; wins: number }>()
+  closedTrades.forEach((trade: Trade) => {
+    const month = new Date(trade.createdAt).toISOString().slice(0, 7) // YYYY-MM
+    const existing = monthlyData.get(month) || { profit: 0, trades: 0, wins: 0 }
+    monthlyData.set(month, {
+      profit: existing.profit + (trade.profitLoss || 0),
+      trades: existing.trades + 1,
+      wins: existing.wins + (trade.outcome === "WIN" ? 1 : 0),
+    })
+  })
+
+  const monthlyPerformance = Array.from(monthlyData.entries())
+    .map(([month, data]) => ({
+      month,
+      profit: data.profit,
+      trades: data.trades,
+      winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
+    }))
+    .sort((a, b) => b.month.localeCompare(a.month))
+    .slice(0, 6) // Last 6 months
+
+  // Currency pair performance
+  const pairData = new Map<string, { profit: number; trades: number; wins: number }>()
+  closedTrades.forEach((trade: Trade) => {
+    const existing = pairData.get(trade.currencyPair) || { profit: 0, trades: 0, wins: 0 }
+    pairData.set(trade.currencyPair, {
+      profit: existing.profit + (trade.profitLoss || 0),
+      trades: existing.trades + 1,
+      wins: existing.wins + (trade.outcome === "WIN" ? 1 : 0),
+    })
+  })
+
+  const currencyPairPerformance = Array.from(pairData.entries())
+    .map(([pair, data]) => ({
+      pair,
+      profit: data.profit,
+      trades: data.trades,
+      winRate: data.trades > 0 ? (data.wins / data.trades) * 100 : 0,
+      avgProfit: data.trades > 0 ? data.profit / data.trades : 0,
+    }))
+    .sort((a, b) => b.profit - a.profit)
+
+  // Trading frequency
+  const now = new Date()
+  const oneDay = 24 * 60 * 60 * 1000
+  const oneWeek = 7 * oneDay
+  const oneMonth = 30 * oneDay
+
+  const dailyTrades = mockTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneDay).length
+
+  const weeklyTrades = mockTrades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneWeek).length
+
+  const monthlyTrades = mockTrades.filter(
+    (t) => now.getTime() - new Date(t.createdAt).getTime() <= oneMonth,
+  ).length
+
+  setAnalytics({
+    totalProfitLoss: totalPL,
+    winRate,
+    totalTrades: mockTrades.length,
+    openTrades: mockTrades.filter((t) => t.outcome === "OPEN").length,
+    avgWin,
+    avgLoss,
+    riskRewardRatio,
+    profitFactor,
+    consecutiveWins: maxWinStreak,
+    consecutiveLosses: maxLossStreak,
+    bestTrade,
+    worstTrade,
+    monthlyPerformance,
+    currencyPairPerformance,
+    tradingFrequency: {
+      daily: dailyTrades,
+      weekly: weeklyTrades,
+      monthly: monthlyTrades,
+    },
+  })
+  } catch (error) {
+      console.error('Error fetching account data:', error)
+      // Don't set account data if API fails - let the component handle the null state
+    }
+  }
+
+  const handleTradeClick = async (tradeId: string) => {
+    try {
+      const tradeDetails = await getTrade(tradeId)
+      setSelectedTrade(tradeDetails)
+      setIsTradeDetailsModalOpen(true)
+    } catch (error) {
+      console.error("Error fetching trade details:", error)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -332,7 +514,11 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
   const handleTradeCreated = () => {
     // Refresh the dashboard data when a new trade is created
-    window.location.reload()
+    fetchData()
+  }
+
+  const handleTradeUpdated = () => {
+    fetchData()
   }
 
   const recentTrades = trades
@@ -360,11 +546,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-gray-600 mt-2">
-                Trading Account Dashboard
-              </p>
-            </div>
             <Button onClick={() => setIsNewTradeModalOpen(true)} className="flex items-center gap-2 w-full mt-4 md:w-auto md:mt-0">
               <Plus className="h-4 w-4" />
               New Trade
@@ -460,10 +641,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                   <div 
                     key={trade.id} 
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedTrade(trade);
-                      setIsTradeDetailsModalOpen(true);
-                    }}
+                    onClick={() => handleTradeClick(trade.id)}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-full ${

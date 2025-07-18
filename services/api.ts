@@ -56,7 +56,7 @@ export const getTradesByAccount = async (accountId: string) => {
 };
 
 export const getTrade = async (tradeId: string) => {
-  const response = await fetch(`${API_URL}/trade/${tradeId}`);
+  const response = await fetch(`${API_URL}/trade?id=${tradeId}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch trade");
@@ -85,6 +85,22 @@ export const createTrade = async (tradeData: {
 
   if (!response.ok) {
     throw new Error("Failed to create trade");
+  }
+
+  return response.json();
+};
+
+export const updateTrade = async (tradeId: string, tradeData: any) => {
+  const response = await fetch(`${API_URL}/trade?id=${tradeId}`, {
+      method: "PATCH",
+      headers: {
+          "Content-Type": "application/json",
+      },
+      body: JSON.stringify(tradeData),
+  });
+
+  if (!response.ok) {
+      throw new Error("Failed to update trade");
   }
 
   return response.json();
