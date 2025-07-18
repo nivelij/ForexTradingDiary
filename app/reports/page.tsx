@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import type { TradingAccount, Trade } from "@/lib/types"
 import { storage } from "@/lib/storage"
+import { getOutcomeBadgeVariant, getOutcomeDisplayText } from "@/lib/ui-utils"
 import { formatCurrency } from "@/lib/utils"
 import { TrendingUp, TrendingDown, Target, Trophy, AlertTriangle } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -94,14 +95,7 @@ export default function ReportsPage() {
   const selectedAccountData = accounts.find((acc) => acc.id === selectedAccount)
 
   const getOutcomeBadge = (outcome: Trade["outcome"]) => {
-    const variants = {
-      OPEN: "secondary",
-      WIN: "default",
-      LOSS: "destructive",
-      BREAK_EVEN: "outline",
-    } as const
-
-    return <Badge variant={variants[outcome]}>{outcome.replace("_", " ")}</Badge>
+    return <Badge variant={getOutcomeBadgeVariant(outcome)}>{getOutcomeDisplayText(outcome)}</Badge>
   }
 
   if (accounts.length === 0) {

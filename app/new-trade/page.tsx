@@ -13,30 +13,12 @@ import { DatePicker } from "@/components/ui/date-picker"
 import type { TradingAccount } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { getAccounts, createTrade } from "@/services/api"
+import { mapApiAccountsToTradingAccounts } from "@/lib/mappers"
+import { storage } from "@/lib/storage"
+import { CURRENCY_PAIRS } from "@/lib/constants"
+import { handleApiError, handleTradeError } from "@/lib/error-utils"
 import { Upload, X } from "lucide-react"
 
-const commonPairs = [
-  "EUR/USD",
-  "GBP/USD",
-  "USD/JPY",
-  "USD/CHF",
-  "AUD/USD",
-  "USD/CAD",
-  "NZD/USD",
-  "EUR/GBP",
-  "EUR/JPY",
-  "GBP/JPY",
-  "CHF/JPY",
-  "EUR/CHF",
-  "AUD/JPY",
-  "GBP/CHF",
-  "EUR/AUD",
-  "GBP/AUD",
-  "AUD/CAD",
-  "EUR/CAD",
-  "GBP/CAD",
-  "CAD/JPY",
-]
 
 interface TradeFormData {
   accountId: string
@@ -73,21 +55,14 @@ export default function NewTradePage() {
     const loadAccounts = async () => {
       try {
         const apiAccounts = await getAccounts()
-        const mappedAccounts: TradingAccount[] = apiAccounts.map((acc: any) => ({
-          id: acc.id,
-          name: acc.name,
-          currency: acc.currency,
-          initialBalance: parseFloat(acc.initial_balance),
-          currentBalance: parseFloat(acc.current_balance),
-          createdAt: acc.created_at,
-        }))
+        const mappedAccounts = mapApiAccountsToTradingAccounts(apiAccounts)
         setAccounts(mappedAccounts)
 
         if (mappedAccounts.length === 1 && !formData.accountId) {
           setFormData((prev) => ({ ...prev, accountId: mappedAccounts[0].id }))
         }
       } catch (error) {
-        console.error('Error loading accounts:', error)
+        handleApiError(error, 'load accounts')
         // Fallback to local storage if API fails
         const loadedAccounts = storage.getAccounts()
         setAccounts(loadedAccounts)
@@ -183,12 +158,7 @@ export default function NewTradePage() {
 
       router.push("/")
     } catch (error) {
-      console.error("Error creating trade:", error)
-      toast({
-        title: "Error",
-        description: "Failed to save trade. Please try again.",
-        variant: "destructive",
-      })
+      handleTradeError(error, 'create trade')
     } finally {
       setIsSubmitting(false)
     }
@@ -270,7 +240,7 @@ export default function NewTradePage() {
                         <SelectValue placeholder="Select pair" />
                       </SelectTrigger>
                       <SelectContent>
-                        {commonPairs.map((pair) => (
+                        {CURRENCY_PAIRS.map((pair) => (
                           <SelectItem key={pair} value={pair}>
                             {pair}
                           </SelectItem>

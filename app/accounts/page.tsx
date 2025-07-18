@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { getAccounts } from "@/services/api"
+import { mapApiAccountsToTradingAccounts } from "@/lib/mappers"
+import { handleAccountError } from "@/lib/error-utils"
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([])
@@ -31,23 +33,10 @@ export default function AccountsPage() {
     const fetchAccounts = async () => {
       try {
         const fetchedAccounts = await getAccounts()
-        const mappedAccounts = fetchedAccounts.map((account: any) => ({
-          id: account.id,
-          name: account.name,
-          currency: account.currency,
-          initialBalance: account.initial_balance,
-          currentBalance: account.current_balance,
-          createdAt: account.created_at,
-        }))
+        const mappedAccounts = mapApiAccountsToTradingAccounts(fetchedAccounts)
         setAccounts(mappedAccounts)
       } catch (error) {
-        console.error("Failed to fetch accounts:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load accounts. Falling back to local storage.",
-          variant: "destructive",
-        })
-        setAccounts(storage.getAccounts())
+        handleAccountError(error, 'fetch accounts', () => setAccounts(storage.getAccounts()))
       } finally {
         setLoading(false)
       }

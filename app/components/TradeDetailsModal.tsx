@@ -14,9 +14,9 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { updateTrade } from "@/services/api"
+import { getOutcomeBadgeVariant, getOutcomeDisplayText } from "@/lib/ui-utils"
 
 interface Trade {
-  id: string
   id: string
   account_id: string
   currency_pair: string
@@ -47,20 +47,6 @@ interface TradeFormData {
   created_at: Date
 }
 
-const getOutcomeBadgeVariant = (outcome: string) => {
-  switch (outcome) {
-    case "WIN":
-      return "default" // Green
-    case "LOSS":
-      return "destructive" // Red
-    case "OPEN":
-      return "secondary" // Gray
-    case "BREAK_EVEN":
-      return "outline" // Neutral
-    default:
-      return "secondary"
-  }
-}
 
 export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, onTradeUpdated }: TradeDetailsModalProps) {
   const { toast } = useToast()
@@ -176,7 +162,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
                   {trade.direction}
                 </Badge>
                 <Badge variant={getOutcomeBadgeVariant(trade.outcome)}>
-                  {trade.outcome}
+                  {getOutcomeDisplayText(trade.outcome)}
                 </Badge>
               </div>
               {isOpen && !isEditing && (

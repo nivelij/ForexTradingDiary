@@ -2,11 +2,9 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Navigation } from "./Navigation"
-import { getAccounts } from "@/services/api"
-import type { TradingAccount } from "@/lib/types"
+import { AccountProvider, useAccount } from "@/contexts/AccountContext"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
@@ -18,47 +16,11 @@ interface AppWrapperProps {
   children: React.ReactNode
 }
 
-export function AppWrapper({ children }: AppWrapperProps) {
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("")
-  const [accounts, setAccounts] = useState<TradingAccount[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+const AppContent: React.FC<AppWrapperProps> = ({ children }) => {
+  const { accounts, selectedAccountId, loading, selectAccount } = useAccount()
   const pathname = usePathname()
 
-  useEffect(() => {
-    const initializeAccounts = async () => {
-      try {
-        const apiAccounts = await getAccounts()
-        
-        if (apiAccounts && apiAccounts.length > 0) {
-          setAccounts(apiAccounts)
-          // Auto-select first account
-          setSelectedAccountId(apiAccounts[0].id)
-        } else {
-          // No accounts from API, redirect to create account unless already there
-          if (pathname !== "/accounts/new") {
-            router.push("/accounts/new")
-          }
-        }
-      } catch (error) {
-        console.error('AppWrapper: Error fetching accounts:', error)
-        // If API fails, redirect to create account
-        if (pathname !== "/accounts/new") {
-          router.push("/accounts/new")
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    initializeAccounts()
-  }, [pathname, router])
-
-  const handleAccountChange = (accountId: string) => {
-    setSelectedAccountId(accountId)
-  }
-
-  if (isLoading) {
+  if (loading) {
     return <Loading message="Loading accounts..." />
   }
 
@@ -66,7 +28,7 @@ export function AppWrapper({ children }: AppWrapperProps) {
   if (accounts.length === 0 && pathname !== "/accounts/new") {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation selectedAccountId="" onAccountChange={handleAccountChange} />
+        <Navigation selectedAccountId="" onAccountChange={selectAccount} />
         <main className="container mx-auto px-4 py-6 max-w-7xl">
           <div className="flex items-center justify-center min-h-[60vh]">
             <Card className="w-full max-w-md">
@@ -92,8 +54,16 @@ export function AppWrapper({ children }: AppWrapperProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation selectedAccountId={selectedAccountId} onAccountChange={handleAccountChange} />
+      <Navigation selectedAccountId={selectedAccountId || ''} onAccountChange={selectAccount} />
       <main className="w-full px-4 py-6 md:container md:mx-auto md:max-w-7xl">{children}</main>
     </div>
+  )
+}
+
+export function AppWrapper({ children }: AppWrapperProps) {
+  return (
+    <AccountProvider>
+      <AppContent>{children}</AppContent>
+    </AccountProvider>
   )
 }

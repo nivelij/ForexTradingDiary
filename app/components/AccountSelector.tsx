@@ -1,44 +1,25 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import type { TradingAccount } from "@/lib/types"
-import { getAccounts } from "@/services/api"
+import { useAccount } from "@/contexts/AccountContext"
 
 interface AccountSelectorProps {
   selectedAccountId: string
-  onAccountChange: (accountId: string) => void
+  onAccountChange: (accountId: string | null) => void
 }
 
 export function AccountSelector({ selectedAccountId, onAccountChange }: AccountSelectorProps) {
-  const [accounts, setAccounts] = useState<TradingAccount[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const apiAccounts = await getAccounts()
-        setAccounts(apiAccounts || [])
-      } catch (error) {
-        console.error('Failed to fetch accounts:', error)
-        setAccounts([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchAccounts()
-  }, [])
+  const { accounts, loading } = useAccount()
 
   const handleAccountChange = (accountId: string) => {
     onAccountChange(accountId)
   }
 
-  if (isLoading) {
+  if (loading) {
     return <Skeleton className="h-10 w-full md:w-[200px]" />
   }
 

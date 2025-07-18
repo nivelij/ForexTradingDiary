@@ -18,7 +18,7 @@ const navigation = [
 
 interface NavigationProps {
   selectedAccountId: string
-  onAccountChange: (accountId: string) => void
+  onAccountChange: (accountId: string | null) => void
 }
 
 export function Navigation({ selectedAccountId, onAccountChange }: NavigationProps) {

@@ -7,6 +7,7 @@ import { AccountSelector } from './components/AccountSelector';
 import { getAccounts, getAccount } from '@/services/api';
 import type { TradingAccount } from '@/lib/types';
 import { Loading } from './components/Loading';
+import { mapApiAccountToTradingAccount, mapApiAccountsToTradingAccounts } from '@/lib/mappers';
 
 import { useSearchParams } from 'next/navigation';
 
@@ -48,14 +49,7 @@ function HomePageContent() {
           const account = await getAccount(accountId);
           if (account) {
             // Map API response to TradingAccount format
-            const mappedAccount: TradingAccount = {
-              id: account.id,
-              name: account.name,
-              currency: account.currency,
-              initialBalance: account.initial_balance,
-              currentBalance: account.current_balance,
-              createdAt: account.created_at,
-            };
+            const mappedAccount = mapApiAccountToTradingAccount(account);
             setAccounts([mappedAccount]);
             setSelectedAccountId(mappedAccount.id);
           }
@@ -63,14 +57,7 @@ function HomePageContent() {
           const fetchedAccounts = await getAccounts();
           if (fetchedAccounts && fetchedAccounts.length > 0) {
             // Map API response to TradingAccount format
-            const mappedAccounts = fetchedAccounts.map((account: any) => ({
-              id: account.id,
-              name: account.name,
-              currency: account.currency,
-              initialBalance: account.initial_balance,
-              currentBalance: account.current_balance,
-              createdAt: account.created_at,
-            }));
+            const mappedAccounts = mapApiAccountsToTradingAccounts(fetchedAccounts);
             setAccounts(mappedAccounts);
             setSelectedAccountId(mappedAccounts[0].id);
           }

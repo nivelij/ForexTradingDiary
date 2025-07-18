@@ -14,29 +14,10 @@ import type { TradingAccount } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { createTrade } from "@/services/api"
 import { Upload, X } from "lucide-react"
+import { CURRENCY_PAIRS } from "@/lib/constants"
+import { validateTradeForm } from "@/lib/validation"
+import { handleValidationError } from "@/lib/error-utils"
 
-const commonPairs = [
-  "EUR/USD",
-  "GBP/USD",
-  "USD/JPY",
-  "USD/CHF",
-  "AUD/USD",
-  "USD/CAD",
-  "NZD/USD",
-  "EUR/GBP",
-  "EUR/JPY",
-  "GBP/JPY",
-  "CHF/JPY",
-  "EUR/CHF",
-  "AUD/JPY",
-  "GBP/CHF",
-  "EUR/AUD",
-  "GBP/AUD",
-  "AUD/CAD",
-  "EUR/CAD",
-  "GBP/CAD",
-  "CAD/JPY",
-]
 
 interface TradeFormData {
   accountId: string
@@ -218,7 +199,7 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
                       className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                     >
                       <option value="">Select pair</option>
-                      {commonPairs.map((pair) => (
+                      {CURRENCY_PAIRS.map((pair) => (
                         <option key={pair} value={pair}>
                           {pair}
                         </option>
@@ -235,7 +216,7 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
                         <SelectValue placeholder="Select pair" />
                       </SelectTrigger>
                       <SelectContent>
-                        {commonPairs.map((pair) => (
+                        {CURRENCY_PAIRS.map((pair) => (
                           <SelectItem key={pair} value={pair}>
                             {pair}
                           </SelectItem>
