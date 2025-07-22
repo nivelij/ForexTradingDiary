@@ -31,9 +31,14 @@ export interface AnalyticsData {
     weekly: number
     monthly: number
   }
+  equityCurve: Array<{
+    tradeNumber: number
+    balance: number
+    currencyPair: string
+  }>
 }
 
-export const calculateTradeAnalytics = (trades: Trade[]): AnalyticsData => {
+export const calculateTradeAnalytics = (trades: Trade[], initialBalance: number = 10000): AnalyticsData => {
   const closedTrades = trades.filter((t: Trade) => t.outcome !== "OPEN")
   const winningTrades = closedTrades.filter((t: Trade) => t.outcome === "WIN")
   const losingTrades = closedTrades.filter((t: Trade) => t.outcome === "LOSS")
@@ -135,6 +140,24 @@ export const calculateTradeAnalytics = (trades: Trade[]): AnalyticsData => {
   const weeklyTrades = trades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneWeek).length
   const monthlyTrades = trades.filter((t) => now.getTime() - new Date(t.createdAt).getTime() <= oneMonth).length
 
+  // Calculate equity curve
+  const sortedClosedTrades = closedTrades
+    .sort((a: Trade, b: Trade) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+  const equityCurve = [
+    { tradeNumber: 0, balance: initialBalance, currencyPair: "Initial" }
+  ]
+
+  let currentBalance = initialBalance
+  sortedClosedTrades.forEach((trade: Trade, index: number) => {
+    currentBalance += trade.profitLoss || 0
+    equityCurve.push({
+      tradeNumber: index + 1,
+      balance: currentBalance,
+      currencyPair: trade.currencyPair
+    })
+  })
+
   return {
     totalProfitLoss: totalPL,
     winRate,
@@ -155,5 +178,6 @@ export const calculateTradeAnalytics = (trades: Trade[]): AnalyticsData => {
       weekly: weeklyTrades,
       monthly: monthlyTrades,
     },
+    equityCurve,
   }
 }

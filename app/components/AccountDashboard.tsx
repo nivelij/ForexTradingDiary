@@ -18,6 +18,7 @@ import { AccountMetrics } from "./dashboard/AccountMetrics"
 import { RecentClosedTrades } from "./dashboard/RecentClosedTrades"
 import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
+import { EquityCurve } from "./dashboard/EquityCurve"
 
 interface AccountDashboardProps {
   accountId: string
@@ -38,8 +39,9 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
       // Fetch all accounts from API and find the one with matching ID
       const accounts = await getAccounts()
       const selectedAccount = accounts.find((acc: any) => acc.id === accountId)
+      let mappedAccount = null
       if (selectedAccount) {
-        const mappedAccount = mapApiAccountToTradingAccount(selectedAccount)
+        mappedAccount = mapApiAccountToTradingAccount(selectedAccount)
         setAccount(mappedAccount)
       }
       
@@ -49,7 +51,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
       setTrades(mappedTrades)
       
       // Calculate comprehensive analytics using API data
-      const analyticsData = calculateTradeAnalytics(mappedTrades)
+      const analyticsData = calculateTradeAnalytics(mappedTrades, mappedAccount?.initialBalance || 10000)
       setAnalytics(analyticsData)
     } catch (error) {
       handleApiError(error, 'fetch account data')
@@ -105,6 +107,11 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
           <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
           <AnalyticsPanel analytics={analytics} account={account} />
+        </div>
+
+        {/* Equity Curve */}
+        <div className="w-full">
+          <EquityCurve analytics={analytics} account={account} />
         </div>
 
         {/* Additional Analytics */}
