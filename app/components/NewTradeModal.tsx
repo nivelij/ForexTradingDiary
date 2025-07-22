@@ -334,24 +334,25 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Screenshots (Optional)</h3>
 
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6">
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <div className="mt-4">
-                  <Label htmlFor="file-upload" className="cursor-pointer">
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-muted-foreground/50 transition-colors">
+              <Label htmlFor="file-upload" className="cursor-pointer block">
+                <div className="text-center">
+                  <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <div className="mt-4">
                     <span className="mt-2 block text-sm font-medium text-foreground">Upload chart screenshots</span>
                     <span className="mt-1 block text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB each</span>
-                  </Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
+                    <span className="mt-2 block text-xs text-primary">Click here to browse files</span>
+                  </div>
                 </div>
-              </div>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="sr-only"
+                />
+              </Label>
             </div>
 
             {formData.screenshots.length > 0 && (

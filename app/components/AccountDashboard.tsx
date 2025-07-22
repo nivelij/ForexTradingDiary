@@ -110,7 +110,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         </div>
 
         {/* Equity Curve */}
-        <div className="w-full">
+        <div className="w-full mt-6">
           <EquityCurve analytics={analytics} account={account} />
         </div>
 
