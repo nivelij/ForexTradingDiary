@@ -17,7 +17,7 @@ import { mapApiAccountsToTradingAccounts } from "@/lib/mappers"
 import { storage } from "@/lib/storage"
 import { CURRENCY_PAIRS } from "@/lib/constants"
 import { handleApiError, handleTradeError } from "@/lib/error-utils"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Image as ImageIcon } from "lucide-react"
 
 
 interface TradeFormData {
@@ -29,6 +29,7 @@ interface TradeFormData {
   profitLoss: string
   retrospective: string
   screenshots: File[]
+  screenshotFileNames: string[]
   openDate: Date
 }
 
@@ -47,6 +48,7 @@ export default function NewTradePage() {
     profitLoss: "",
     retrospective: "",
     screenshots: [],
+    screenshotFileNames: [],
     openDate: new Date(),
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -88,9 +90,11 @@ export default function NewTradePage() {
       })
     }
 
+    const fileNames = imageFiles.map((file) => file.name)
     setFormData((prev) => ({
       ...prev,
       screenshots: [...prev.screenshots, ...imageFiles],
+      screenshotFileNames: [...prev.screenshotFileNames, ...fileNames],
     }))
   }
 
@@ -98,6 +102,7 @@ export default function NewTradePage() {
     setFormData((prev) => ({
       ...prev,
       screenshots: prev.screenshots.filter((_, i) => i !== index),
+      screenshotFileNames: prev.screenshotFileNames.filter((_, i) => i !== index),
     }))
   }
 
@@ -377,25 +382,24 @@ export default function NewTradePage() {
                 </div>
               </div>
 
-              {formData.screenshots.length > 0 && (
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {formData.screenshots.map((file, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(file) || "/placeholder.svg"}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-6 w-6"
-                        onClick={() => removeScreenshot(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+              {formData.screenshotFileNames.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 mt-4">
+                  {formData.screenshotFileNames.map((fileName, index) => (
+                    <div key={index} className="relative flex items-center justify-between p-2 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground truncate">{fileName}</span>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 ml-2"
+                      onClick={() => removeScreenshot(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                   ))}
                 </div>
               )}

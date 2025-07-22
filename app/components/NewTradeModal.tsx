@@ -13,7 +13,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import type { TradingAccount } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { createTrade } from "@/services/api"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { CURRENCY_PAIRS } from "@/lib/constants"
 import { validateTradeForm } from "@/lib/validation"
 import { handleValidationError } from "@/lib/error-utils"
@@ -27,7 +27,8 @@ interface TradeFormData {
   outcome: "OPEN" | "WIN" | "LOSS" | "BREAK_EVEN"
   profitLoss: string
   retrospective: string
-  screenshots: File[]
+  screenshots: string[]
+  screenshotFileNames: string[]
   openDate: Date
 }
 
@@ -51,11 +52,12 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
     profitLoss: "",
     retrospective: "",
     screenshots: [],
+    screenshotFileNames: [],
     openDate: new Date(),
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const imageFiles = files.filter((file) => file.type.startsWith("image/"))
 
@@ -65,18 +67,41 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
         description: "Only image files are allowed.",
         variant: "destructive",
       })
+      return
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      screenshots: [...prev.screenshots, ...imageFiles],
-    }))
+    const fileToDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = (error) => reject(error)
+      })
+    }
+
+    try {
+      const base64Images = await Promise.all(imageFiles.map(fileToDataUrl))
+      const fileNames = imageFiles.map((file) => file.name)
+      setFormData((prev) => ({
+        ...prev,
+        screenshots: [...prev.screenshots, ...base64Images],
+        screenshotFileNames: [...prev.screenshotFileNames, ...fileNames],
+      }))
+    } catch (error) {
+      console.error("Error converting files to Base64:", error)
+      toast({
+        title: "Error processing files",
+        description: "Could not read the selected image files.",
+        variant: "destructive",
+      })
+    }
   }
 
   const removeScreenshot = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       screenshots: prev.screenshots.filter((_, i) => i !== index),
+      screenshotFileNames: prev.screenshotFileNames.filter((_, i) => i !== index),
     }))
   }
 
@@ -125,6 +150,7 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
         profit_loss: profitLoss,
         retrospective: formData.retrospective || undefined,
         created_at: formData.openDate.toISOString().split('T')[0],
+        screenshots: formData.screenshots,
       }
 
       // Submit to API
@@ -145,6 +171,7 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
         profitLoss: "",
         retrospective: "",
         screenshots: [],
+        screenshotFileNames: [],
         openDate: new Date(),
       })
 
@@ -355,20 +382,19 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
               </Label>
             </div>
 
-            {formData.screenshots.length > 0 && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                {formData.screenshots.map((file, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={URL.createObjectURL(file) || "/placeholder.svg"}
-                      alt={`Screenshot ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border"
-                    />
+            {formData.screenshotFileNames.length > 0 && (
+              <div className="grid grid-cols-1 gap-4 mt-4">
+                {formData.screenshotFileNames.map((fileName, index) => (
+                  <div key={index} className="relative flex items-center justify-between p-2 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground truncate">{fileName}</span>
+                    </div>
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="ghost"
                       size="icon"
-                      className="absolute top-2 right-2 h-6 w-6"
+                      className="h-6 w-6 ml-2"
                       onClick={() => removeScreenshot(index)}
                     >
                       <X className="h-4 w-4" />
