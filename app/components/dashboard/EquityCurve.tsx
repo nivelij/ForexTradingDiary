@@ -75,7 +75,7 @@ export function EquityCurve({ analytics, account }: EquityCurveProps) {
                 <ChartTooltipContent
                   formatter={(value) => [
                     formatCurrency(Number(value), account.currency),
-                    "Balance"
+                    ""
                   ]}
                   labelFormatter={(label) => `Trade ${label}`}
                 />
