@@ -15,6 +15,9 @@ import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { updateTrade } from "@/services/api"
 import { getOutcomeBadgeVariant, getOutcomeDisplayText } from "@/lib/ui-utils"
+import { Upload, X, Image as ImageIcon } from "lucide-react"
+import { handleFileChange as handleImageUpload } from "@/lib/image-utils"
+import { ImagePreview } from "./ImagePreview"
 
 interface Trade {
   id: string
@@ -27,6 +30,7 @@ interface Trade {
   retrospective: string | null
   created_at: string
   updated_at: string
+  screenshots: string[]
 }
 
 interface TradeDetailsModalProps {
@@ -45,6 +49,8 @@ interface TradeFormData {
   profit_loss: string
   retrospective: string
   created_at: Date
+  screenshots: string[]
+  screenshotFileNames: string[]
 }
 
 
@@ -52,6 +58,8 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [selectedImage, setSelectedImage] = useState("")
   const [formData, setFormData] = useState<TradeFormData>({
     currency_pair: "",
     direction: "BUY",
@@ -60,6 +68,8 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
     profit_loss: "",
     retrospective: "",
     created_at: new Date(),
+    screenshots: [],
+    screenshotFileNames: [],
   })
 
   // Update form data when trade changes
@@ -73,6 +83,8 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
         profit_loss: trade.profit_loss || "",
         retrospective: trade.retrospective || "",
         created_at: new Date(trade.created_at),
+        screenshots: trade.screenshots || [],
+        screenshotFileNames: trade.screenshots?.map((_, i) => `screenshot_${i + 1}.png`) || [],
       })
     }
   }, [trade])
@@ -110,6 +122,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
       await updateTrade(trade.id, {
         ...formData,
         profit_loss: formData.outcome === "OPEN" || formData.outcome === "BREAK_EVEN" ? null : parseFloat(formData.profit_loss),
+        screenshots: formData.screenshots,
       });
       
       toast({
@@ -130,6 +143,18 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleImageUpload(e, setFormData, true)
+  }
+
+  const removeScreenshot = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      screenshots: prev.screenshots.filter((_, i) => i !== index),
+      screenshotFileNames: prev.screenshotFileNames.filter((_, i) => i !== index),
+    }))
   }
 
   const handleClose = () => {
@@ -311,6 +336,79 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
             </div>
           </div>
 
+          {/* Screenshots */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Screenshots</h3>
+            {isEditing ? (
+              <div>
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 hover:border-muted-foreground/50 transition-colors">
+                  <Label htmlFor="file-upload" className="cursor-pointer block">
+                    <div className="text-center">
+                      <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                      <div className="mt-4">
+                        <span className="mt-2 block text-sm font-medium text-foreground">Upload chart screenshots</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB each</span>
+                        <span className="mt-2 block text-xs text-primary">Click here to browse files</span>
+                      </div>
+                    </div>
+                    <Input
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="sr-only"
+                    />
+                  </Label>
+                </div>
+
+                {formData.screenshotFileNames.length > 0 && (
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    {formData.screenshotFileNames.map((fileName, index) => (
+                      <div key={index} className="relative flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground truncate">{fileName}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 ml-2"
+                          onClick={() => removeScreenshot(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {trade.screenshots && trade.screenshots.length > 0 ? (
+                  trade.screenshots.map((screenshot, index) => (
+                    <div
+                      key={index}
+                      className="relative flex items-center justify-between p-2 bg-muted rounded-lg cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setSelectedImage(screenshot)
+                        setIsPreviewOpen(true)
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground truncate">{`screenshot_${index + 1}.png`}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No screenshots available.</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-4 pt-4">
             {isEditing ? (
               <>
@@ -329,6 +427,11 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
           </div>
         </form>
       </DialogContent>
+      <ImagePreview
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        imageUrl={selectedImage}
+      />
     </Dialog>
   )
 }

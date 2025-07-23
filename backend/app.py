@@ -3,6 +3,7 @@ import json
 import psycopg2
 from psycopg2 import extras
 from datetime import datetime
+import base64
 
 # Define the CORS headers that will be added to every response
 CORS_HEADERS = {
@@ -153,7 +154,9 @@ def get_account_by_id(account_id):
     return account
 
 def create_trade(trade_data):
-    """Creates a new trade for a given account."""
+    """Creates a new trade for a given account and handles screenshots."""
+    screenshots = trade_data.pop('screenshots', [])
+
     sql = """
         INSERT INTO trades (account_id, created_at, currency_pair, direction, rationale, outcome, profit_loss, retrospective, updated_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_DATE) RETURNING id;
@@ -171,6 +174,21 @@ def create_trade(trade_data):
                 trade_data.get('retrospective')
             ))
             new_id = cur.fetchone()[0]
+
+            if screenshots:
+                screenshot_sql = """
+                    INSERT INTO trade_screenshots (trade_id, image_data, mime_type)
+                    VALUES (%s, %s, %s);
+                """
+                for screenshot_b64 in screenshots:
+                    try:
+                        header, encoded = screenshot_b64.split(',', 1)
+                        mime_type = header.split(';')[0].split(':')[1]
+                        image_data = base64.b64decode(encoded)
+                        cur.execute(screenshot_sql, (new_id, image_data, mime_type))
+                    except Exception as e:
+                        print(f"Error processing screenshot: {e}")
+
             conn.commit()
     return {'message': 'Trade created successfully', 'id': new_id}
 
@@ -183,17 +201,33 @@ def get_all_trades():
     return trades
 
 def get_trade_by_id(trade_id):
-    """Retrieves a single trade by its ID."""
+    """Retrieves a single trade by its ID, including screenshots."""
     with get_db_connection() as conn:
         with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+            # Get trade details
             cur.execute("SELECT * FROM trades WHERE id = %s;", (trade_id,))
             trade = cur.fetchone()
-    if trade is None:
-        raise Exception(f"Trade with ID {trade_id} not found.")
+
+            if trade is None:
+                raise Exception(f"Trade with ID {trade_id} not found.")
+
+            # Get screenshots
+            cur.execute("SELECT image_data, mime_type FROM trade_screenshots WHERE trade_id = %s;", (trade_id,))
+            screenshots_data = cur.fetchall()
+
+            screenshots = []
+            for record in screenshots_data:
+                image_base64 = base64.b64encode(record['image_data']).decode('utf-8')
+                screenshots.append(f"data:{record['mime_type']};base64,{image_base64}")
+
+            trade['screenshots'] = screenshots
+
     return trade
 
 def update_trade(trade_id, trade_data):
-    """Updates an existing trade and recalculates account balance."""
+    """Updates an existing trade, handles screenshots, and recalculates account balance."""
+    screenshots = trade_data.pop('screenshots', [])
+
     # First get the account_id from the trade being updated
     get_account_sql = "SELECT account_id FROM trades WHERE id = %s;"
     
@@ -241,6 +275,22 @@ def update_trade(trade_id, trade_data):
                 trade_data.get('retrospective'),
                 trade_id
             ))
+
+            # Handle screenshots
+            if screenshots:
+                # Then, insert the new ones
+                screenshot_sql = """
+                    INSERT INTO trade_screenshots (trade_id, image_data, mime_type)
+                    VALUES (%s, %s, %s);
+                """
+                for screenshot_b64 in screenshots:
+                    try:
+                        header, encoded = screenshot_b64.split(',', 1)
+                        mime_type = header.split(';')[0].split(':')[1]
+                        image_data = base64.b64decode(encoded)
+                        cur.execute(screenshot_sql, (trade_id, image_data, mime_type))
+                    except Exception as e:
+                        print(f"Error processing screenshot: {e}")
             
             # Recalculate and update the account balance
             cur.execute(balance_update_sql, (account_id, account_id))

@@ -74,6 +74,7 @@ export const createTrade = async (tradeData: {
   profit_loss?: number;
   retrospective?: string;
   created_at: string;
+  screenshots?: string[];
 }) => {
   const response = await fetch(`${API_URL}/trade`, {
     method: "POST",

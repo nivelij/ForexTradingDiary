@@ -16,7 +16,7 @@ import { createTrade } from "@/services/api"
 import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { CURRENCY_PAIRS } from "@/lib/constants"
 import { validateTradeForm } from "@/lib/validation"
-import { handleValidationError } from "@/lib/error-utils"
+import { handleFileChange as handleImageUpload } from "@/lib/image-utils"
 
 
 interface TradeFormData {
@@ -57,44 +57,8 @@ export function NewTradeModal({ open, onOpenChange, accountId, account, onTradeC
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"))
-
-    if (imageFiles.length !== files.length) {
-      toast({
-        title: "Invalid files",
-        description: "Only image files are allowed.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const fileToDataUrl = (file: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.readAsDataURL(file)
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = (error) => reject(error)
-      })
-    }
-
-    try {
-      const base64Images = await Promise.all(imageFiles.map(fileToDataUrl))
-      const fileNames = imageFiles.map((file) => file.name)
-      setFormData((prev) => ({
-        ...prev,
-        screenshots: [...prev.screenshots, ...base64Images],
-        screenshotFileNames: [...prev.screenshotFileNames, ...fileNames],
-      }))
-    } catch (error) {
-      console.error("Error converting files to Base64:", error)
-      toast({
-        title: "Error processing files",
-        description: "Could not read the selected image files.",
-        variant: "destructive",
-      })
-    }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleImageUpload(e, setFormData, true)
   }
 
   const removeScreenshot = (index: number) => {
