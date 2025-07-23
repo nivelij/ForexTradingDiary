@@ -62,6 +62,11 @@ export function EquityCurve({ analytics, account }: EquityCurveProps) {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12 }}
+              interval={9}
+              tickFormatter={(value) => {
+                const num = Number(value)
+                return num % 10 === 0 ? num.toString() : ''
+              }}
             />
             <YAxis
               domain={yAxisDomain}
