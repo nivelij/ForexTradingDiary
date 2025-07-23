@@ -18,6 +18,7 @@ import { getOutcomeBadgeVariant, getOutcomeDisplayText } from "@/lib/ui-utils"
 import { Upload, X, Image as ImageIcon } from "lucide-react"
 import { handleFileChange as handleImageUpload } from "@/lib/image-utils"
 import { ImagePreview } from "./ImagePreview"
+import { TradingViewButton } from "./TradingViewButton"
 
 interface Trade {
   id: string
@@ -122,7 +123,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
       await updateTrade(trade.id, {
         ...formData,
         profit_loss: formData.outcome === "OPEN" || formData.outcome === "BREAK_EVEN" ? null : parseFloat(formData.profit_loss),
-        screenshots: formData.screenshots,
+        screenshots: formData.screenshots.filter(s => s.startsWith('data:image/')), // Only send new base64 encoded screenshots
       });
       
       toast({
@@ -423,6 +424,9 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
               <Button type="button" variant="outline" onClick={handleClose}>
                 Close
               </Button>
+            )}
+            {isOpen && !isEditing && (
+              <TradingViewButton type="button" currencyPair={trade.currency_pair} />
             )}
           </div>
         </form>
