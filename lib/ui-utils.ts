@@ -1,6 +1,6 @@
 import type { Trade } from "./types"
 
-export type BadgeVariant = "secondary" | "default" | "destructive" | "outline"
+export type BadgeVariant = "secondary" | "default" | "destructive" | "outline" | "success"
 
 /**
  * Returns the appropriate badge variant for a trade outcome
@@ -8,7 +8,7 @@ export type BadgeVariant = "secondary" | "default" | "destructive" | "outline"
 export const getOutcomeBadgeVariant = (outcome: Trade["outcome"]): BadgeVariant => {
   const variants: Record<string, BadgeVariant> = {
     OPEN: "secondary",
-    WIN: "default", 
+    WIN: "success", 
     LOSS: "destructive",
     BREAK_EVEN: "outline",
   }

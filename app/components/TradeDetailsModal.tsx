@@ -61,6 +61,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState("")
+  const [newScreenshots, setNewScreenshots] = useState<string[]>([])
   const [formData, setFormData] = useState<TradeFormData>({
     currency_pair: "",
     direction: "BUY",
@@ -87,6 +88,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
         screenshots: trade.screenshots || [],
         screenshotFileNames: trade.screenshots?.map((_, i) => `screenshot_${i + 1}.png`) || [],
       })
+      setNewScreenshots([])
     }
   }, [trade])
 
@@ -123,7 +125,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
       await updateTrade(trade.id, {
         ...formData,
         profit_loss: formData.outcome === "OPEN" || formData.outcome === "BREAK_EVEN" ? null : parseFloat(formData.profit_loss),
-        screenshots: formData.screenshots.filter(s => s.startsWith('data:image/')), // Only send new base64 encoded screenshots
+        screenshots: newScreenshots,
       });
       
       toast({
@@ -146,16 +148,71 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleImageUpload(e, setFormData, true)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"))
+
+    if (imageFiles.length === 0) return;
+
+    const fileToDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = (error) => reject(error)
+      })
+    }
+
+    try {
+      const base64Images = await Promise.all(imageFiles.map(fileToDataUrl))
+      const fileNames = imageFiles.map((file) => file.name)
+
+      setNewScreenshots((prev) => [...prev, ...base64Images])
+      setFormData((prev) => ({
+        ...prev,
+        screenshotFileNames: [...prev.screenshotFileNames, ...fileNames],
+      }))
+    } catch (error) {
+      console.error("Error converting files to Base64:", error)
+      toast({
+        title: "Error processing files",
+        description: "Could not read the selected image files.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const removeScreenshot = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      screenshots: prev.screenshots.filter((_, i) => i !== index),
-      screenshotFileNames: prev.screenshotFileNames.filter((_, i) => i !== index),
-    }))
+  const removeScreenshot = (fileName: string) => {
+    const existingIndex = formData.screenshots.findIndex(
+      (screenshot) => screenshot === fileName
+    )
+
+    if (existingIndex !== -1) {
+      // This is an existing screenshot, so we remove it from the main list.
+      setFormData((prev) => ({
+        ...prev,
+        screenshots: prev.screenshots.filter((_, i) => i !== existingIndex),
+        screenshotFileNames: prev.screenshotFileNames.filter(
+          (_, i) => i !== existingIndex
+        ),
+      }))
+      return
+    }
+
+    // This is a new screenshot, so we remove it from the new list.
+    const newIndex = newScreenshots.findIndex(
+      (screenshot) => screenshot === fileName
+    )
+
+    if (newIndex !== -1) {
+      setNewScreenshots((prev) => prev.filter((_, i) => i !== newIndex))
+      setFormData((prev) => ({
+        ...prev,
+        screenshotFileNames: prev.screenshotFileNames.filter(
+          (_, i) => i !== formData.screenshots.length + newIndex
+        ),
+      }))
+    }
   }
 
   const handleClose = () => {
@@ -184,7 +241,7 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-semibold">{trade.currency_pair}</h3>
-                <Badge variant={trade.direction === "BUY" ? "default" : "destructive"}>
+                <Badge variant={trade.direction === "BUY" ? "success" : "destructive"}>
                   {trade.direction}
                 </Badge>
                 <Badge variant={getOutcomeBadgeVariant(trade.outcome)}>
@@ -363,20 +420,44 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
                   </Label>
                 </div>
 
-                {formData.screenshotFileNames.length > 0 && (
+                {formData.screenshots.length > 0 && (
                   <div className="grid grid-cols-1 gap-4 mt-4">
-                    {formData.screenshotFileNames.map((fileName, index) => (
+                    <h4 className="text-sm font-semibold">Existing Screenshots</h4>
+                    {formData.screenshots.map((screenshot, index) => (
                       <div key={index} className="relative flex items-center justify-between p-2 bg-muted rounded-lg">
                         <div className="flex items-center gap-2">
                           <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground truncate">{fileName}</span>
+                          <span className="text-sm font-medium text-foreground truncate">{`screenshot_${index + 1}.png`}</span>
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 ml-2"
-                          onClick={() => removeScreenshot(index)}
+                          onClick={() => removeScreenshot(screenshot)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {newScreenshots.length > 0 && (
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    <h4 className="text-sm font-semibold">New Screenshots</h4>
+                    {newScreenshots.map((screenshot, index) => (
+                      <div key={index} className="relative flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground truncate">{formData.screenshotFileNames[formData.screenshots.length + index]}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 ml-2"
+                          onClick={() => removeScreenshot(screenshot)}
                         >
                           <X className="h-4 w-4" />
                         </Button>
