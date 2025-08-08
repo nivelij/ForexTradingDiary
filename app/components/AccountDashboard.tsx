@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus } from "lucide-react"
+import { Plus, ArrowUp, ArrowDown } from "lucide-react"
 import type { TradingAccount, Trade } from "@/lib/types"
 import { getAccounts, getTrades, getTrade } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
@@ -128,7 +128,27 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                   <div key={month.month} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">{month.month}</p>
-                      <p className="text-sm text-gray-600">{month.trades} trades | {month.winRate.toFixed(1)}% win rate</p>
+                      <div className="text-sm text-gray-600">
+                        <p>{month.trades} trades | {month.winRate.toFixed(1)}% win rate</p>
+                        <div className="flex items-center justify-end gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-green-600">
+                            <span className="font-bold">~</span>
+                            <span>{formatCurrency(month.avgWin, account.currency)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-red-600">
+                            <span className="font-bold">~</span>
+                            <span>{formatCurrency(month.avgLoss, account.currency)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-green-600">
+                            <ArrowUp className="h-4 w-4" />
+                            <span>{formatCurrency(month.maxProfit, account.currency)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-red-600">
+                            <ArrowDown className="h-4 w-4" />
+                            <span>{formatCurrency(month.maxLoss, account.currency)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <p className={`font-medium ${month.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(month.profit, account.currency)}
