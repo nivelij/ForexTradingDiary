@@ -92,19 +92,23 @@ export const calculateTradeAnalytics = (trades: Trade[], initialBalance: number 
   )
 
   // Monthly performance
-  const monthlyData = new Map<string, { profit: number; trades: number; wins: number; totalWinAmount: number; totalLossAmount: number; losingTrades: number; maxProfit: number; maxLoss: number }>()
+  const monthlyData = new Map<
+    string,
+    { profit: number; trades: number; wins: number; totalWinAmount: number; totalLossAmount: number; losingTrades: number; maxProfit: number; maxLoss: number }
+  >()
   closedTrades.forEach((trade: Trade) => {
     const month = new Date(trade.createdAt).toISOString().slice(0, 7) // YYYY-MM
-    const existing = monthlyData.get(month) || { profit: 0, trades: 0, wins: 0, totalWinAmount: 0, totalLossAmount: 0, losingTrades: 0, maxProfit: Number.NEGATIVE_INFINITY, maxLoss: Number.POSITIVE_INFINITY }
+    const existing = monthlyData.get(month) || { profit: 0, trades: 0, wins: 0, totalWinAmount: 0, totalLossAmount: 0, losingTrades: 0, maxProfit: 0, maxLoss: 0 }
+    const profitLoss = trade.profitLoss || 0
     monthlyData.set(month, {
-      profit: existing.profit + (trade.profitLoss || 0),
+      profit: existing.profit + profitLoss,
       trades: existing.trades + 1,
       wins: existing.wins + (trade.outcome === "WIN" ? 1 : 0),
-      totalWinAmount: existing.totalWinAmount + (trade.outcome === "WIN" ? trade.profitLoss || 0 : 0),
-      totalLossAmount: existing.totalLossAmount + (trade.outcome === "LOSS" ? trade.profitLoss || 0 : 0),
+      totalWinAmount: existing.totalWinAmount + (trade.outcome === "WIN" ? profitLoss : 0),
+      totalLossAmount: existing.totalLossAmount + (trade.outcome === "LOSS" ? profitLoss : 0),
       losingTrades: existing.losingTrades + (trade.outcome === "LOSS" ? 1 : 0),
-      maxProfit: Math.max(existing.maxProfit, trade.profitLoss || 0),
-      maxLoss: Math.min(existing.maxLoss, trade.profitLoss || 0),
+      maxProfit: Math.max(existing.maxProfit, profitLoss > 0 ? profitLoss : 0),
+      maxLoss: Math.min(existing.maxLoss, profitLoss < 0 ? profitLoss : 0),
     })
   })
 
@@ -117,7 +121,7 @@ export const calculateTradeAnalytics = (trades: Trade[], initialBalance: number 
       avgWin: data.wins > 0 ? data.totalWinAmount / data.wins : 0,
       avgLoss: data.losingTrades > 0 ? Math.abs(data.totalLossAmount / data.losingTrades) : 0,
       maxProfit: data.maxProfit,
-      maxLoss: data.maxLoss,
+      maxLoss: Math.abs(data.maxLoss),
     }))
     .sort((a, b) => b.month.localeCompare(a.month))
     .slice(0, 6) // Last 6 months

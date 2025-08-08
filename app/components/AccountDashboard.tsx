@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Plus, ArrowUp, ArrowDown } from "lucide-react"
 import type { TradingAccount, Trade } from "@/lib/types"
 import { getAccounts, getTrades, getTrade } from "@/services/api"
@@ -20,6 +21,7 @@ import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
 import { EquityCurve } from "./dashboard/EquityCurve"
 
+import { MonthlyPerformanceModal } from "./dashboard/MonthlyPerformanceModal"
 interface AccountDashboardProps {
   accountId: string
 }
@@ -33,6 +35,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [selectedTrade, setSelectedTrade] = useState<any>(null)
   const [isTradeDetailsModalOpen, setIsTradeDetailsModalOpen] = useState(false)
   const [analytics, setAnalytics] = useState<AnalyticsData>({} as AnalyticsData)
+  const [isMonthlyStatsModalOpen, setIsMonthlyStatsModalOpen] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState<AnalyticsData["monthlyPerformance"][0] | null>(null)
 
   const fetchData = async () => {
     try {
@@ -66,6 +70,11 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     } catch (error) {
       handleApiError(error, 'fetch trade details')
     }
+  }
+
+  const handleMonthClick = (monthData: AnalyticsData["monthlyPerformance"][0]) => {
+    setSelectedMonth(monthData)
+    setIsMonthlyStatsModalOpen(true)
   }
 
   useEffect(() => {
@@ -102,6 +111,8 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         {/* Key Metrics */}
         <AccountMetrics analytics={analytics} />
 
+        <Separator className="my-6" />
+
         {/* Recent Trades */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
@@ -125,34 +136,42 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
             <CardContent>
               <div className="space-y-3">
                 {analytics.monthlyPerformance?.map((month) => (
-                  <div key={month.month} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{month.month}</p>
-                      <div className="text-sm text-gray-600">
-                        <p>{month.trades} trades | {month.winRate.toFixed(1)}% win rate</p>
-                        <div className="flex items-center justify-end gap-2 text-xs">
-                          <div className="flex items-center gap-1 text-green-600">
-                            <span className="font-bold">~</span>
-                            <span>{formatCurrency(month.avgWin, account.currency)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-red-600">
-                            <span className="font-bold">~</span>
-                            <span>{formatCurrency(month.avgLoss, account.currency)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-green-600">
-                            <ArrowUp className="h-4 w-4" />
-                            <span>{formatCurrency(month.maxProfit, account.currency)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-red-600">
-                            <ArrowDown className="h-4 w-4" />
-                            <span>{formatCurrency(month.maxLoss, account.currency)}</span>
-                          </div>
-                        </div>
+                  <div key={month.month}>
+                    {/* Desktop View */}
+                    <div className="hidden md:flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{month.month}</p>
+                        <p className="text-sm text-gray-600">
+                          {month.trades} trades | {month.winRate.toFixed(1)}% win rate
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {formatCurrency(month.profit, account.currency)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Avg: +{formatCurrency(month.avgWin, account.currency)} / -
+                          {formatCurrency(month.avgLoss, account.currency)}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Max: +{formatCurrency(month.maxProfit, account.currency)} / -
+                          {formatCurrency(month.maxLoss, account.currency)}
+                        </p>
                       </div>
                     </div>
-                    <p className={`font-medium ${month.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(month.profit, account.currency)}
-                    </p>
+                    {/* Mobile View */}
+                    <div
+                      className="flex md:hidden items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer active:bg-gray-100"
+                      onClick={() => handleMonthClick(month)}
+                    >
+                      <div>
+                        <p className="font-medium">{month.month}</p>
+                        <p className="text-sm text-gray-600">
+                          {month.trades} trades | {month.winRate.toFixed(1)}% win rate
+                        </p>
+                      </div>
+                      <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(month.profit, account.currency)}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -180,7 +199,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                         {formatCurrency(pair.profit, account.currency)}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Avg: {formatCurrency(pair.avgProfit, account.currency)}
+                        Avg: {pair.avgProfit >= 0 ? "+" : ""}{formatCurrency(pair.avgProfit, account.currency)}
                       </p>
                     </div>
                   </div>
@@ -206,6 +225,13 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         trade={selectedTrade}
         accountCurrency={account.currency}
         onTradeUpdated={fetchData}
+      />
+
+      <MonthlyPerformanceModal
+        open={isMonthlyStatsModalOpen}
+        onOpenChange={setIsMonthlyStatsModalOpen}
+        monthData={selectedMonth}
+        accountCurrency={account.currency}
       />
     </div>
   )
