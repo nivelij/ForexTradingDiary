@@ -18,19 +18,7 @@ export function AccountDetails({ account, analytics }: AccountDetailsProps) {
         <CardDescription>Current account balance and performance overview</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          <div className="space-y-1 md:space-y-2">
-            <p className="text-xs md:text-sm font-medium text-gray-600">Current Balance</p>
-            <p className="text-lg md:text-2xl font-bold text-gray-900">
-              {formatCurrency(account.currentBalance, account.currency)}
-            </p>
-          </div>
-          <div className="space-y-1 md:space-y-2">
-            <p className="text-xs md:text-sm font-medium text-gray-600">Initial Balance</p>
-            <p className="text-lg md:text-2xl font-bold text-gray-900">
-              {formatCurrency(account.initialBalance, account.currency)}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="space-y-1 md:space-y-2">
             <p className="text-xs md:text-sm font-medium text-gray-600">Total P&L</p>
             <p className={`text-lg md:text-2xl font-bold ${analytics.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>

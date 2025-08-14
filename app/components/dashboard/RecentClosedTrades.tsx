@@ -16,7 +16,7 @@ export function RecentClosedTrades({ trades, account, onTradeClick }: RecentClos
 
   const recentClosedTrades = trades
     .filter(trade => trade.outcome !== 'OPEN')
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
 
   return (
