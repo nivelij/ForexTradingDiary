@@ -15,7 +15,6 @@ import { NewTradeModal } from "./NewTradeModal"
 import { TradeDetailsModal } from "./TradeDetailsModal"
 import { Loading } from "./Loading"
 import { AccountDetails } from "./dashboard/AccountDetails"
-import { AccountMetrics } from "./dashboard/AccountMetrics"
 import { RecentClosedTrades } from "./dashboard/RecentClosedTrades"
 import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
@@ -107,9 +106,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
 
         {/* Account Details */}
         <AccountDetails account={account} analytics={analytics} />
-
-        {/* Key Metrics */}
-        <AccountMetrics analytics={analytics} />
 
         <Separator className="my-6" />
 
