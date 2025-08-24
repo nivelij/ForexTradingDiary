@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight, Radio } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, Radio, ListTodo } from "lucide-react" // Added ListTodo
 import type { Trade, TradingAccount } from "@/lib/types"
 import { getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
 
@@ -20,7 +20,10 @@ export function OpenTrades({ trades, account, onTradeClick }: OpenTradesProps) {
   return (
     <Card className="lg:col-span-1">
       <CardHeader>
-        <CardTitle>Open Trades</CardTitle>
+        <div className="flex items-center gap-2"> {/* Added div for icon and title */}
+          <ListTodo className="h-5 w-5 text-orange-500" /> {/* Added ListTodo icon */}
+          <CardTitle className="text-xl">Open Trades</CardTitle>
+        </div>
         <CardDescription>Your currently active trades</CardDescription>
       </CardHeader>
       <CardContent>

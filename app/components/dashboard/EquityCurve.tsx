@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { formatCurrency } from "@/lib/utils"
 import type { TradingAccount } from "@/lib/types"
 import type { AnalyticsData } from "@/lib/analytics"
+import { LineChart as LineChartIcon } from "lucide-react" // Renamed to avoid conflict with recharts LineChart
 
 interface EquityCurveProps {
   analytics: AnalyticsData
@@ -27,7 +28,10 @@ export function EquityCurve({ analytics, account }: EquityCurveProps) {
     return (
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Equity Curve</CardTitle>
+          <div className="flex items-center gap-2">
+            <LineChartIcon className="h-5 w-5 text-teal-500" />
+            <CardTitle className="text-xl">Equity Curve</CardTitle>
+          </div>
           <CardDescription>Balance progression over trades</CardDescription>
         </CardHeader>
         <CardContent>
@@ -51,7 +55,10 @@ export function EquityCurve({ analytics, account }: EquityCurveProps) {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Equity Curve</CardTitle>
+        <div className="flex items-center gap-2">
+          <LineChartIcon className="h-5 w-5 text-teal-500" />
+          <CardTitle className="text-xl">Equity Curve</CardTitle>
+        </div>
         <CardDescription>Balance progression from initial balance to current</CardDescription>
       </CardHeader>
       <CardContent>

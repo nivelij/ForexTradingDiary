@@ -4,9 +4,9 @@ import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Plus, ArrowUp, ArrowDown } from "lucide-react"
+import { Plus, Sparkles, ChevronUp, ChevronDown, CalendarDays, DollarSign } from "lucide-react"
 import type { TradingAccount, Trade } from "@/lib/types"
-import { getAccounts, getTrades, getTrade } from "@/services/api"
+import { getAccounts, getTrades, getTrade, getInsights } from "@/services/api"
 import { formatCurrency } from "@/lib/utils"
 import { calculateTradeAnalytics, type AnalyticsData } from "@/lib/analytics"
 import { mapApiAccountToTradingAccount, mapApiTradesForAccount } from "@/lib/mappers"
@@ -21,6 +21,8 @@ import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
 import { EquityCurve } from "./dashboard/EquityCurve"
 import { AllTradesTable } from "./dashboard/AllTradesTable"
 
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+
 import { MonthlyPerformanceModal } from "./dashboard/MonthlyPerformanceModal"
 interface AccountDashboardProps {
   accountId: string
@@ -29,7 +31,10 @@ interface AccountDashboardProps {
 export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [account, setAccount] = useState<TradingAccount | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
+  const [insights, setInsights] = useState<string | null>(null)
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false)
   const [isNewTradeModalOpen, setIsNewTradeModalOpen] = useState(false)
+
   const [selectedTrade, setSelectedTrade] = useState<any>(null)
   const [isTradeDetailsModalOpen, setIsTradeDetailsModalOpen] = useState(false)
   const [analytics, setAnalytics] = useState<AnalyticsData>({} as AnalyticsData)
@@ -46,6 +51,12 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
       if (selectedAccount) {
         mappedAccount = mapApiAccountToTradingAccount(selectedAccount)
         setAccount(mappedAccount)
+
+        // Fetch insights for the selected account
+        const fetchedInsights = await getInsights(accountId)
+        console.log("Raw fetched insights:", fetchedInsights);
+        console.log("Insights content before setting state:", fetchedInsights.advice);
+        setInsights(fetchedInsights.advice) // Corrected to use 'advice' field
       }
       
       // Fetch trades from API
@@ -107,6 +118,29 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
           </div>
         </div>
 
+        {insights && (
+          <Card className="mb-6">
+            <Collapsible open={isInsightsOpen} onOpenChange={setIsInsightsOpen}>
+              <CardHeader className="flex-row items-center justify-between gap-2 py-3">
+                <div className="flex items-center gap-2 flex-none">
+                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  <CardTitle className="text-xl">Trading Insights</CardTitle>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    {isInsightsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  <div dangerouslySetInnerHTML={{ __html: insights }} />
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+        )}
+
         {/* Account Details */}
         <AccountDetails account={account} analytics={analytics} />
 
@@ -132,7 +166,10 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
               {/* Monthly Performance */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Monthly Performance</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5 text-indigo-500" />
+                    <CardTitle className="text-xl">Monthly Performance</CardTitle>
+                  </div>
                   <CardDescription>Last 6 months trading results</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -183,7 +220,10 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
               {/* Currency Pair Performance */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Currency Pair Performance</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-yellow-500" />
+                    <CardTitle className="text-xl">Currency Pair Performance</CardTitle>
+                  </div>
                   <CardDescription>Performance by trading pairs</CardDescription>
                 </CardHeader>
                 <CardContent>

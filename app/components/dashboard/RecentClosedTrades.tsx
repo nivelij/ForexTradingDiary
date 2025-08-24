@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, History } from "lucide-react" // Added History
 import type { Trade, TradingAccount } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
 import { getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
@@ -25,7 +25,10 @@ export function RecentClosedTrades({ trades, account, onTradeClick, onSeeAllClic
   return (
     <Card className="lg:col-span-1">
       <CardHeader>
-        <CardTitle>Recent Closed Trades</CardTitle>
+        <div className="flex items-center gap-2"> {/* Added div for icon and title */}
+          <History className="h-5 w-5 text-green-500" /> {/* Added History icon */}
+          <CardTitle className="text-xl">Recent Closed Trades</CardTitle>
+        </div>
         <CardDescription>Your most recent completed trades</CardDescription>
         <Button onClick={onSeeAllClick} variant="outline" className="w-full mt-4">See all trades</Button>
       </CardHeader>

@@ -90,10 +90,10 @@ def lambda_handler(event, context):
             response = update_trade(trade_id, body)
             return build_response(200, response)
         
-        # /analytics endpoints
-        elif path and path.startswith("/analytics/") and method == "GET":
-            account_id = path_parameters.get('account_id') or path.split('/')[-1]
-            response = get_analytics(account_id)
+        # /insights endpoint
+        elif path == "/insights" and method == "GET":
+            account_id = query_params.get('account_id')
+            response = get_insights(account_id)
             return build_response(200, response)
         
         # /health endpoint
@@ -224,6 +224,22 @@ def get_trade_by_id(trade_id):
 
     return trade
 
+def get_insights(account_id):
+    """Retrieves insights for a given account."""
+    get_insights_sql = "SELECT advice FROM trading_insights WHERE account_id = %s;"
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(get_insights_sql, (account_id,))
+            insight = cur.fetchone()
+
+    insights = {
+        "advice": insight[0] if insight else "No insights available."
+    }
+
+    return insights
+
+
 def update_trade(trade_id, trade_data):
     """Updates an existing trade, handles screenshots, and recalculates account balance."""
     screenshots = trade_data.pop('screenshots', [])
@@ -247,12 +263,7 @@ def update_trade(trade_id, trade_data):
     # Recalculate account balance based on all trades for this account
     balance_update_sql = """
         UPDATE trading_accounts 
-        SET current_balance = initial_balance + COALESCE(
-            (SELECT SUM(profit_loss) 
-             FROM trades 
-             WHERE account_id = %s AND profit_loss IS NOT NULL), 
-            0
-        )
+        SET current_balance = current_balance + %s
         WHERE id = %s;
     """
     
@@ -264,14 +275,15 @@ def update_trade(trade_id, trade_data):
             if not result:
                 raise Exception(f"Trade with ID {trade_id} not found.")
             account_id = result[0]
-            
+            profit_loss = trade_data.get('profit_loss', None)
+
             # Update the trade
             cur.execute(update_sql, (
                 trade_data['currency_pair'],
                 trade_data['direction'],
                 trade_data['rationale'],
                 trade_data.get('outcome', 'OPEN'),
-                trade_data.get('profit_loss', 0),
+                profit_loss,
                 trade_data.get('retrospective'),
                 trade_id
             ))
@@ -293,7 +305,8 @@ def update_trade(trade_id, trade_data):
                         print(f"Error processing screenshot: {e}")
             
             # Recalculate and update the account balance
-            cur.execute(balance_update_sql, (account_id, account_id))
+            if profit_loss is not None:
+                cur.execute(balance_update_sql, (profit_loss, account_id))
             
             conn.commit()
     return {'message': f'Trade {trade_id} updated successfully and account balance recalculated'}

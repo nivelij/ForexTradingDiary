@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { TradingAccount } from "@/lib/types"
 import type { AnalyticsData } from "@/lib/analytics"
 import { formatCurrency } from "@/lib/utils"
+import { BarChart } from "lucide-react" // Added BarChart
 
 interface AnalyticsPanelProps {
   analytics: AnalyticsData
@@ -14,7 +15,10 @@ export function AnalyticsPanel({ analytics, account }: AnalyticsPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Performance Analytics</CardTitle>
+        <div className="flex items-center gap-2"> {/* Added div for icon and title */}
+          <BarChart className="h-5 w-5 text-purple-500" /> {/* Added BarChart icon */}
+          <CardTitle className="text-xl">Performance Analytics</CardTitle>
+        </div>
         <CardDescription>Advanced trading metrics</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

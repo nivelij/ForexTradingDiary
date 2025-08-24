@@ -106,3 +106,13 @@ export const updateTrade = async (tradeId: string, tradeData: any) => {
 
   return response.json();
 };
+
+export const getInsights = async (accountId: string) => {
+  const response = await fetch(`${API_URL}/insights?account_id=${accountId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch insights");
+  }
+
+  return response.json();
+};

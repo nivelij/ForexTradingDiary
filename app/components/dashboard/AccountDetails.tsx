@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { TradingAccount } from "@/lib/types"
 import type { AnalyticsData } from "@/lib/analytics"
 import { formatCurrency } from "@/lib/utils"
+import { Wallet } from "lucide-react"
 
 interface AccountDetailsProps {
   account: TradingAccount
@@ -14,7 +15,10 @@ export function AccountDetails({ account, analytics }: AccountDetailsProps) {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Account Details</CardTitle>
+        <div className="flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-blue-500" />
+          <CardTitle className="text-xl">Account Details</CardTitle>
+        </div>
         <CardDescription>Current account balance and performance overview</CardDescription>
       </CardHeader>
       <CardContent>
