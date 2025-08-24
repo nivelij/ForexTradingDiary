@@ -19,13 +19,12 @@ import { RecentClosedTrades } from "./dashboard/RecentClosedTrades"
 import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
 import { EquityCurve } from "./dashboard/EquityCurve"
+import { AllTradesTable } from "./dashboard/AllTradesTable"
 
 import { MonthlyPerformanceModal } from "./dashboard/MonthlyPerformanceModal"
 interface AccountDashboardProps {
   accountId: string
 }
-
-
 
 export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [account, setAccount] = useState<TradingAccount | null>(null)
@@ -36,6 +35,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData>({} as AnalyticsData)
   const [isMonthlyStatsModalOpen, setIsMonthlyStatsModalOpen] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<AnalyticsData["monthlyPerformance"][0] | null>(null)
+  const [showAllTrades, setShowAllTrades] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -85,8 +85,6 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
     fetchData()
   }
 
-
-
   if (!account) {
     return <Loading message="Loading account data..." />
   }
@@ -110,100 +108,105 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         <Separator className="my-6" />
 
         {/* Recent Trades */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
-          <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
-          <AnalyticsPanel analytics={analytics} account={account} />
-        </div>
+        {showAllTrades ? (
+          <AllTradesTable trades={trades} account={account} onTradeClick={handleTradeClick} onClose={() => setShowAllTrades(false)} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <OpenTrades trades={trades} account={account} onTradeClick={handleTradeClick} />
+              <RecentClosedTrades trades={trades} account={account} onTradeClick={handleTradeClick} onSeeAllClick={() => setShowAllTrades(true)} />
+              <AnalyticsPanel analytics={analytics} account={account} />
+            </div>
 
-        {/* Equity Curve */}
-        <div className="w-full mt-6">
-          <EquityCurve analytics={analytics} account={account} />
-        </div>
+            <div className="w-full mt-6">
+              <EquityCurve analytics={analytics} account={account} />
+            </div>
 
-        {/* Additional Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          {/* Monthly Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Performance</CardTitle>
-              <CardDescription>Last 6 months trading results</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {analytics.monthlyPerformance?.map((month) => (
-                  <div key={month.month}>
-                    {/* Desktop View */}
-                    <div className="hidden md:flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{month.month}</p>
-                        <p className="text-sm text-gray-600">
-                          {month.trades} trades | {month.winRate.toFixed(1)}% win rate
-                        </p>
+            {/* Additional Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Monthly Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly Performance</CardTitle>
+                  <CardDescription>Last 6 months trading results</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analytics.monthlyPerformance?.map((month) => (
+                      <div key={month.month}>
+                        {/* Desktop View */}
+                        <div className="hidden md:flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-medium">{month.month}</p>
+                            <p className="text-sm text-gray-600">
+                              {month.trades} trades | {month.winRate.toFixed(1)}% win rate
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {formatCurrency(month.profit, account.currency)}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Avg: +{formatCurrency(month.avgWin, account.currency)} / -
+                              {formatCurrency(month.avgLoss, account.currency)}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Max: +{formatCurrency(month.maxProfit, account.currency)} / -
+                              {formatCurrency(month.maxLoss, account.currency)}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Mobile View */}
+                        <div
+                          className="flex md:hidden items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer active:bg-gray-100"
+                          onClick={() => handleMonthClick(month)}
+                        >
+                          <div>
+                            <p className="font-medium">{month.month}</p>
+                            <p className="text-sm text-gray-600">
+                              {month.trades} trades | {month.winRate.toFixed(1)}% win rate
+                            </p>
+                          </div>
+                          <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(month.profit, account.currency)}</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {formatCurrency(month.profit, account.currency)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Avg: +{formatCurrency(month.avgWin, account.currency)} / -
-                          {formatCurrency(month.avgLoss, account.currency)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Max: +{formatCurrency(month.maxProfit, account.currency)} / -
-                          {formatCurrency(month.maxLoss, account.currency)}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Mobile View */}
-                    <div
-                      className="flex md:hidden items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer active:bg-gray-100"
-                      onClick={() => handleMonthClick(month)}
-                    >
-                      <div>
-                        <p className="font-medium">{month.month}</p>
-                        <p className="text-sm text-gray-600">
-                          {month.trades} trades | {month.winRate.toFixed(1)}% win rate
-                        </p>
-                      </div>
-                      <p className={`font-medium ${month.profit >= 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(month.profit, account.currency)}</p>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Currency Pair Performance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Currency Pair Performance</CardTitle>
-              <CardDescription>Performance by trading pairs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {analytics.currencyPairPerformance?.slice(0, 8).map((pair) => (
-                  <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">{pair.pair}</p>
-                      <p className="text-sm text-gray-600">
-                        {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(pair.profit, account.currency)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Avg: {pair.avgProfit >= 0 ? "+" : ""}{formatCurrency(pair.avgProfit, account.currency)}
-                      </p>
-                    </div>
+              {/* Currency Pair Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Currency Pair Performance</CardTitle>
+                  <CardDescription>Performance by trading pairs</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analytics.currencyPairPerformance?.slice(0, 8).map((pair) => (
+                      <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{pair.pair}</p>
+                          <p className="text-sm text-gray-600">
+                            {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(pair.profit, account.currency)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Avg: {pair.avgProfit >= 0 ? "+" : ""}{formatCurrency(pair.avgProfit, account.currency)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modals */}

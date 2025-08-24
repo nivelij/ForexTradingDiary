@@ -6,13 +6,16 @@ import type { Trade, TradingAccount } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
 import { getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
 
+import { Button } from "@/components/ui/button";
+
 interface RecentClosedTradesProps {
   trades: Trade[]
   account: TradingAccount
   onTradeClick: (tradeId: string) => void
+  onSeeAllClick: () => void
 }
 
-export function RecentClosedTrades({ trades, account, onTradeClick }: RecentClosedTradesProps) {
+export function RecentClosedTrades({ trades, account, onTradeClick, onSeeAllClick }: RecentClosedTradesProps) {
 
   const recentClosedTrades = trades
     .filter(trade => trade.outcome !== 'OPEN')
@@ -24,6 +27,7 @@ export function RecentClosedTrades({ trades, account, onTradeClick }: RecentClos
       <CardHeader>
         <CardTitle>Recent Closed Trades</CardTitle>
         <CardDescription>Your most recent completed trades</CardDescription>
+        <Button onClick={onSeeAllClick} variant="outline" className="w-full mt-4">See all trades</Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
