@@ -76,7 +76,7 @@ export default function AccountsPage() {
         
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-black mb-4"></div>
             <p className="text-muted-foreground">Loading accounts...</p>
           </CardContent>
         </Card>

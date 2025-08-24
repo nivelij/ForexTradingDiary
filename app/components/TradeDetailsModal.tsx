@@ -220,7 +220,17 @@ export function TradeDetailsModal({ open, onOpenChange, trade, accountCurrency, 
     onOpenChange(false)
   }
 
-  if (!trade) return null
+  if (!trade) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="flex justify-center items-center h-48">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-black"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   const isOpen = trade.outcome === "OPEN"
   const modalTitle = isOpen ? "Update Trade" : "Summary of Trade"

@@ -62,12 +62,17 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   }
 
   const handleTradeClick = async (tradeId: string) => {
+    // Open the modal immediately and clear previous trade data
+    setIsTradeDetailsModalOpen(true)
+    setSelectedTrade(null)
+
     try {
       const tradeDetails = await getTrade(tradeId)
       setSelectedTrade(tradeDetails)
-      setIsTradeDetailsModalOpen(true)
     } catch (error) {
-      handleApiError(error, 'fetch trade details')
+      handleApiError(error, "fetch trade details")
+      // Optionally close the modal on error or show an error message
+      setIsTradeDetailsModalOpen(false)
     }
   }
 

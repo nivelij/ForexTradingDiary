@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,11 +20,20 @@ interface AllTradesTableProps {
 
 export function AllTradesTable({ trades, account, onClose, onTradeClick }: AllTradesTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const tradesPerPage = 10;
   const isMobile = useIsMobile();
 
   const closedTrades = trades
     .filter(trade => trade.outcome !== 'OPEN')
     .filter(trade => trade.currencyPair.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const paginatedTrades = closedTrades.slice(
+    (currentPage - 1) * tradesPerPage,
+    currentPage * tradesPerPage
+  );
+
+  const totalPages = Math.ceil(closedTrades.length / tradesPerPage);
 
   return (
     <Card className="lg:col-span-2">
@@ -39,7 +48,7 @@ export function AllTradesTable({ trades, account, onClose, onTradeClick }: AllTr
               placeholder="Filter by symbol..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64"
+              className="w-full sm:w-96"
             />
             <Button onClick={onClose}>Close</Button>
           </div>
@@ -48,7 +57,7 @@ export function AllTradesTable({ trades, account, onClose, onTradeClick }: AllTr
       <CardContent>
         {isMobile ? (
           <div className="space-y-4">
-            {closedTrades.map((trade) => (
+            {paginatedTrades.map((trade) => (
               <div 
                 key={trade.id} 
                 onClick={() => onTradeClick(trade.id)} 
@@ -83,13 +92,13 @@ export function AllTradesTable({ trades, account, onClose, onTradeClick }: AllTr
               </TableRow>
             </TableHeader>
             <TableBody>
-              {closedTrades.map((trade, index) => (
+              {paginatedTrades.map((trade, index) => (
                 <TableRow 
                   key={trade.id} 
                   onClick={() => onTradeClick(trade.id)} 
                   className="cursor-pointer"
                 >
-                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{(currentPage - 1) * tradesPerPage + index + 1}</TableCell>
                   <TableCell>{trade.currencyPair}</TableCell>
                   <TableCell>{formatDate(trade.openDate)}</TableCell>
                   <TableCell>{trade.outcome !== 'OPEN' ? formatDate(trade.updatedAt) : '-'}</TableCell>
@@ -113,6 +122,22 @@ export function AllTradesTable({ trades, account, onClose, onTradeClick }: AllTr
           </Table>
         )}
       </CardContent>
+      <CardFooter className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Next
+        </Button>
+      </CardFooter>
     </Card>
   )
 }
