@@ -27,6 +27,7 @@ export const CURRENCY_PAIRS = [
   "XAUUSD",
   "XTIUSD",
   "US500",
+  "USTEC"
 ] as const;
 
 export const TRADE_OUTCOMES = [
