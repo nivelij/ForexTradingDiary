@@ -41,6 +41,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
   const [isMonthlyStatsModalOpen, setIsMonthlyStatsModalOpen] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<AnalyticsData["monthlyPerformance"][0] | null>(null)
   const [showAllTrades, setShowAllTrades] = useState(false)
+  const [currencyPage, setCurrencyPage] = useState(1)
 
   const fetchData = async () => {
     try {
@@ -228,24 +229,52 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {analytics.currencyPairPerformance?.slice(0, 8).map((pair) => (
-                      <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{pair.pair}</p>
-                          <p className="text-sm text-gray-600">
-                            {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(pair.profit, account.currency)}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Avg: {pair.avgProfit >= 0 ? "+" : ""}{formatCurrency(pair.avgProfit, account.currency)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                    {(() => {
+                      const itemsPerPage = 6;
+                      const currencyPairs = analytics.currencyPairPerformance || [];
+                      const totalPages = Math.ceil(currencyPairs.length / itemsPerPage);
+                      const paginatedPairs = currencyPairs.slice((currencyPage - 1) * itemsPerPage, currencyPage * itemsPerPage);
+
+                      if (currencyPairs.length === 0) {
+                        return <p className="text-sm text-gray-500">No trades recorded yet.</p>;
+                      }
+
+                      return (
+                        <>
+                          {paginatedPairs.map((pair) => (
+                            <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <p className="font-medium">{pair.pair}</p>
+                                <p className="text-sm text-gray-600">
+                                  {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {formatCurrency(pair.profit, account.currency)}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  Avg: {pair.avgProfit >= 0 ? "+" : ""}{formatCurrency(pair.avgProfit, account.currency)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                          {totalPages > 1 && (
+                            <div className="flex justify-between items-center mt-4">
+                              <Button onClick={() => setCurrencyPage(currencyPage - 1)} disabled={currencyPage === 1} variant="outline">
+                                Previous
+                              </Button>
+                              <span className="text-sm text-gray-600">
+                                Page {currencyPage} of {totalPages}
+                              </span>
+                              <Button onClick={() => setCurrencyPage(currencyPage + 1)} disabled={currencyPage === totalPages} variant="outline">
+                                Next
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
