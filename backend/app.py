@@ -4,6 +4,7 @@ import psycopg2
 from psycopg2 import extras
 from datetime import datetime
 import base64
+import boto3
 
 # Define the CORS headers that will be added to every response
 CORS_HEADERS = {
@@ -30,6 +31,13 @@ def get_db_connection():
         raise
 
 def lambda_handler(event, context):
+    # Check if this is an SQS event
+    if 'Records' in event:
+        for record in event['Records']:
+            if record.get('eventSource') == 'aws:sqs':
+                print(f"SQS message received: {record['body']}")
+        return {'statusCode': 200}
+    
     # Extract the path and HTTP method using keys for REST API proxy integration
     path = event.get("path")
     method = event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod")
@@ -94,6 +102,10 @@ def lambda_handler(event, context):
         elif path == "/insights" and method == "GET":
             account_id = query_params.get('account_id')
             response = get_insights(account_id)
+            return build_response(200, response)
+        
+        elif path == "/insights" and method == "PUT":
+            response = generate_insights()
             return build_response(200, response)
         
         # /health endpoint
@@ -309,6 +321,14 @@ def update_trade(trade_id, trade_data):
                 cur.execute(balance_update_sql, (profit_loss, account_id))
             
             conn.commit()
+            
+            # Generate insights when profit_loss is provided
+            if profit_loss is not None:
+                try:
+                    generate_insights()
+                except Exception as e:
+                    print(f"Warning: Failed to generate insights: {e}")
+                    
     return {'message': f'Trade {trade_id} updated successfully and account balance recalculated'}
 
 def get_analytics(account_id):
@@ -329,3 +349,21 @@ def get_analytics(account_id):
             cur.execute(sql, (account_id,))
             analytics = cur.fetchall()
     return analytics
+
+def generate_insights():
+    """Sends insights data to SQS queue."""
+    try:
+        sqs = boto3.client('sqs', region_name='eu-central-1')
+        queue_url = 'https://sqs.eu-central-1.amazonaws.com/177078044036/TradingInsightsQueue'
+        
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps({
+                "action": "generate"
+            }, default=str)
+        )
+        
+        return {'message': 'Insights sent to SQS successfully', 'messageId': response['MessageId']}
+    except Exception as e:
+        print(f"Error sending message to SQS: {e}")
+        raise Exception(f"Failed to send insights to SQS: {str(e)}")
