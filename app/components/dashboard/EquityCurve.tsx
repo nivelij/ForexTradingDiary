@@ -3,7 +3,7 @@
 import React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts"
 import { formatCurrency } from "@/lib/utils"
 import type { TradingAccount } from "@/lib/types"
 import type { AnalyticsData } from "@/lib/analytics"
@@ -92,6 +92,12 @@ export function EquityCurve({ analytics, account }: EquityCurveProps) {
                   labelFormatter={(label) => `Trade ${label}`}
                 />
               }
+            />
+            <ReferenceLine
+              y={account.initialBalance}
+              stroke="#94a3b8"
+              strokeDasharray="4 4"
+              strokeWidth={1}
             />
             <Line
               type="monotone"

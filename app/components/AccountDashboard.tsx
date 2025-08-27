@@ -178,7 +178,10 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                     {analytics.monthlyPerformance?.map((month) => (
                       <div key={month.month}>
                         {/* Desktop View */}
-                        <div className="hidden md:flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div 
+                          className="hidden md:flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => handleMonthClick(month)}
+                        >
                           <div>
                             <p className="font-medium">{month.month}</p>
                             <p className="text-sm text-gray-600">
@@ -305,6 +308,7 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
         onOpenChange={setIsMonthlyStatsModalOpen}
         monthData={selectedMonth}
         accountCurrency={account.currency}
+        trades={trades}
       />
     </div>
   )

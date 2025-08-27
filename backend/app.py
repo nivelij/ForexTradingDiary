@@ -1,10 +1,12 @@
 import os
 import json
 import psycopg2
-from psycopg2 import extras
-from datetime import datetime
 import base64
 import boto3
+import traceback
+from psycopg2 import extras
+from datetime import datetime
+from genai import generate_trading_insights
 
 # Define the CORS headers that will be added to every response
 CORS_HEADERS = {
@@ -36,6 +38,20 @@ def lambda_handler(event, context):
         for record in event['Records']:
             if record.get('eventSource') == 'aws:sqs':
                 print(f"SQS message received: {record['body']}")
+                try:
+                    message_body = json.loads(record['body'])
+                    if message_body.get('action') == 'generate':
+                        account_id = message_body.get('account_id')
+                        if account_id:
+                            insights_data = generate_insights(account_id)
+                            print(f"Generated insights for account {account_id}: {insights_data}")
+                        else:
+                            print("No account_id found in SQS message")
+                except json.JSONDecodeError:
+                    print("Failed to parse SQS message body as JSON")
+                except Exception as e:
+                    print(f"Error processing SQS message: {e}")
+                    traceback.print_exc()
         return {'statusCode': 200}
     
     # Extract the path and HTTP method using keys for REST API proxy integration
@@ -105,7 +121,10 @@ def lambda_handler(event, context):
             return build_response(200, response)
         
         elif path == "/insights" and method == "PUT":
-            response = generate_insights()
+            account_id = query_params.get('account_id')
+            if not account_id:
+                return build_response(400, {"error": "Missing account_id in query parameters"})
+            response = generate_insights_event(account_id)
             return build_response(200, response)
         
         # /health endpoint
@@ -325,7 +344,7 @@ def update_trade(trade_id, trade_data):
             # Generate insights when profit_loss is provided
             if profit_loss is not None:
                 try:
-                    generate_insights()
+                    generate_insights_event(account_id)
                 except Exception as e:
                     print(f"Warning: Failed to generate insights: {e}")
                     
@@ -350,7 +369,47 @@ def get_analytics(account_id):
             analytics = cur.fetchall()
     return analytics
 
-def generate_insights():
+def generate_insights(account_id):
+    """Query trade data and format for insights generation."""
+    sql = """
+        SELECT currency_pair, rationale, retrospective, outcome 
+        FROM trades 
+        WHERE rationale <> '' 
+        AND retrospective <> '' 
+        AND account_id = %s 
+        ORDER BY updated_at DESC
+    """
+    
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (account_id,))
+            trades = cur.fetchall()
+    
+    formatted_data = []
+    for trade in trades:
+        formatted_data.append([trade[0], trade[1], trade[2], trade[3]])
+    
+    insights = generate_trading_insights(json.dumps(formatted_data))
+    
+    # Insert or update the insights in trading_insights table
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Check if record exists
+            cur.execute("SELECT account_id FROM trading_insights WHERE account_id = %s;", (account_id,))
+            exists = cur.fetchone()
+            
+            if exists:
+                # Update existing record
+                cur.execute("UPDATE trading_insights SET advice = %s WHERE account_id = %s;", (insights, account_id))
+            else:
+                # Insert new record
+                cur.execute("INSERT INTO trading_insights (account_id, advice) VALUES (%s, %s);", (account_id, insights))
+            
+            conn.commit()
+    
+    return insights
+
+def generate_insights_event(account_id):
     """Sends insights data to SQS queue."""
     try:
         sqs = boto3.client('sqs', region_name='eu-central-1')
@@ -359,7 +418,8 @@ def generate_insights():
         response = sqs.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps({
-                "action": "generate"
+                "action": "generate",
+                "account_id": account_id
             }, default=str)
         )
         
