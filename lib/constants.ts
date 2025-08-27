@@ -25,6 +25,7 @@ export const CURRENCY_PAIRS = [
   "AUDCAD",
   "XAUEUR",
   "XAUUSD",
+  "XAGUSD",
   "XTIUSD",
   "US500",
   "USTEC"
