@@ -5,6 +5,8 @@ import type React from "react"
 import { usePathname } from "next/navigation"
 import { Navigation } from "./Navigation"
 import { AccountProvider, useAccount } from "@/contexts/AccountContext"
+import { AuthProvider, useAuth } from "@/contexts/AuthContext"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
@@ -18,10 +20,16 @@ interface AppWrapperProps {
 
 const AppContent: React.FC<AppWrapperProps> = ({ children }) => {
   const { accounts, selectedAccountId, loading, selectAccount } = useAccount()
+  const { isLoggedIn } = useAuth()
   const pathname = usePathname()
 
   if (loading) {
     return <Loading message="Loading accounts..." />
+  }
+
+  // Don't show navigation on login page
+  if (!isLoggedIn || pathname === '/login') {
+    return <>{children}</>
   }
 
   // Show account creation prompt if no accounts exist
@@ -72,8 +80,12 @@ const AppContent: React.FC<AppWrapperProps> = ({ children }) => {
 
 export function AppWrapper({ children }: AppWrapperProps) {
   return (
-    <AccountProvider>
-      <AppContent>{children}</AppContent>
-    </AccountProvider>
+    <AuthProvider>
+      <ProtectedRoute>
+        <AccountProvider>
+          <AppContent>{children}</AppContent>
+        </AccountProvider>
+      </ProtectedRoute>
+    </AuthProvider>
   )
 }

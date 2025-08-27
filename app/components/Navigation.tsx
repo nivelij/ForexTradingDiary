@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 import { AccountSelector } from "./AccountSelector"
-import { Menu, Home, Settings } from "lucide-react"
+import { Menu, Home, Settings, LogOut, User } from "lucide-react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/AuthContext"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -24,6 +26,12 @@ interface NavigationProps {
 export function Navigation({ selectedAccountId, onAccountChange }: NavigationProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const { currentUser, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    // The ProtectedRoute will handle redirecting to login
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -79,6 +87,24 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
                     <span>{item.name}</span>
                   </Link>
                 ))}
+                
+                <div className="pt-4 mt-4 border-t">
+                  <div className="flex items-center space-x-2 text-sm text-foreground/60 mb-3">
+                    <User className="h-4 w-4" />
+                    <span>Signed in as {currentUser}</span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      handleLogout()
+                      setOpen(false)
+                    }}
+                    className="flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50 w-full justify-start p-0"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </SheetContent>
@@ -89,6 +115,26 @@ export function Navigation({ selectedAccountId, onAccountChange }: NavigationPro
               <AccountSelector selectedAccountId={selectedAccountId} onAccountChange={onAccountChange} />
             </div>
             
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden md:inline">{currentUser}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem disabled>
+                  <User className="h-4 w-4 mr-2" />
+                  Signed in as {currentUser}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
