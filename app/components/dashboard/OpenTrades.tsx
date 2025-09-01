@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowUpRight, ArrowDownRight, Radio, ListTodo } from "lucide-react" // Added ListTodo
 import type { Trade, TradingAccount } from "@/lib/types"
 import { getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
+import { CurrencyIcon } from "../CurrencyIcon"
 
 interface OpenTradesProps {
   trades: Trade[]
@@ -38,6 +39,7 @@ export function OpenTrades({ trades, account, onTradeClick }: OpenTradesProps) {
                 onClick={() => onTradeClick(trade.id)}
               >
                 <div className="flex items-center gap-3">
+                  <CurrencyIcon currencyPair={trade.currencyPair} size={48} className="flex-shrink-0" />
                   <div className={`p-2 rounded-full ${getDirectionIconClassName(trade.direction)}`}>
                     {trade.direction === 'BUY' ? (
                       <ArrowUpRight className={`h-4 w-4 ${getDirectionIconColorClassName(trade.direction)}`} />

@@ -20,6 +20,7 @@ import { OpenTrades } from "./dashboard/OpenTrades"
 import { AnalyticsPanel } from "./dashboard/AnalyticsPanel"
 import { EquityCurve } from "./dashboard/EquityCurve"
 import { AllTradesTable } from "./dashboard/AllTradesTable"
+import { CurrencyIcon } from "./CurrencyIcon"
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -246,11 +247,14 @@ export function AccountDashboard({ accountId }: AccountDashboardProps) {
                         <>
                           {paginatedPairs.map((pair) => (
                             <div key={pair.pair} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div>
-                                <p className="font-medium">{pair.pair}</p>
-                                <p className="text-sm text-gray-600">
-                                  {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
-                                </p>
+                              <div className="flex items-center gap-3">
+                                <CurrencyIcon currencyPair={pair.pair} size={48} className="flex-shrink-0" />
+                                <div>
+                                  <p className="font-medium">{pair.pair}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {pair.trades} trades | {pair.winRate.toFixed(1)}% win rate
+                                  </p>
+                                </div>
                               </div>
                               <div className="text-right">
                                 <p className={`font-medium ${pair.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>

@@ -5,6 +5,7 @@ import { ArrowUpRight, ArrowDownRight, History } from "lucide-react" // Added Hi
 import type { Trade, TradingAccount } from "@/lib/types"
 import { formatCurrency } from "@/lib/utils"
 import { getProfitLossClassName, getDirectionIconClassName, getDirectionIconColorClassName } from "@/lib/ui-utils"
+import { CurrencyIcon } from "../CurrencyIcon"
 
 import { Button } from "@/components/ui/button";
 
@@ -44,6 +45,7 @@ export function RecentClosedTrades({ trades, account, onTradeClick, onSeeAllClic
                 onClick={() => onTradeClick(trade.id)}
               >
                 <div className="flex items-center gap-3">
+                  <CurrencyIcon currencyPair={trade.currencyPair} size={48} className="flex-shrink-0" />
                   <div className={`p-2 rounded-full ${getDirectionIconClassName(trade.direction)}`}>
                     {trade.direction === 'BUY' ? (
                       <ArrowUpRight className={`h-4 w-4 ${getDirectionIconColorClassName(trade.direction)}`} />
